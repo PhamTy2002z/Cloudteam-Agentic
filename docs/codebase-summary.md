@@ -1,8 +1,8 @@
 # Codebase Summary - AI Toolkit Sync Platform
 
 **Last Updated:** 2026-01-03
-**Phase:** Phase 04 Complete
-**Status:** Frontend Features with Hooks, Components & Editor Integration
+**Phase:** Phase 06 Complete
+**Status:** E2E Testing Infrastructure (Backend + Frontend)
 
 ---
 
@@ -22,6 +22,7 @@ AI Toolkit Sync Platform is a centralized documentation management system for AI
 - **Database:** PostgreSQL 16 (Docker)
 - **Runtime:** Node.js 20+
 - **Language:** TypeScript 5.4.0
+- **Testing:** Jest (E2E), Supertest
 
 ### Frontend
 - **Framework:** Next.js 14.2.0 (App Router)
@@ -29,6 +30,7 @@ AI Toolkit Sync Platform is a centralized documentation management system for AI
 - **Editor:** Monaco Editor 4.6.0
 - **Styling:** Tailwind CSS 3.4.1
 - **Language:** TypeScript 5.4.0
+- **Testing:** Vitest, React Testing Library
 
 ### Infrastructure
 - **Monorepo:** pnpm workspaces
@@ -46,18 +48,31 @@ ai-toolkit-sync-platform/
 │   ├── backend/              # NestJS API server
 │   │   ├── prisma/
 │   │   │   └── schema.prisma # Database schema (4 models)
-│   │   └── src/
-│   │       ├── prisma/       # Prisma service (global module)
-│   │       ├── app.module.ts # Root application module
-│   │       └── main.ts       # Bootstrap with CORS, validation
+│   │   ├── src/
+│   │   │   ├── prisma/       # Prisma service (global module, cleanDatabase())
+│   │   │   ├── app.module.ts # Root application module
+│   │   │   └── main.ts       # Bootstrap with CORS, validation
+│   │   └── test/             # E2E tests (Jest)
+│   │       ├── jest-e2e.json # E2E config
+│   │       ├── app.e2e-spec.ts
+│   │       ├── projects.e2e-spec.ts
+│   │       ├── lock.e2e-spec.ts
+│   │       └── hook.e2e-spec.ts
 │   └── frontend/             # Next.js application
-│       └── app/
-│           ├── layout.tsx    # Root layout with metadata
-│           ├── page.tsx      # Landing page
-│           └── globals.css   # Tailwind base styles
+│       ├── app/
+│       │   ├── layout.tsx    # Root layout with metadata
+│       │   ├── page.tsx      # Landing page
+│       │   └── globals.css   # Tailwind base styles
+│       ├── __tests__/        # Component tests (Vitest)
+│       │   ├── setup.tsx     # Test setup with mocks
+│       │   └── components/
+│       │       ├── project-card.test.tsx
+│       │       └── lock-status.test.tsx
+│       └── vitest.config.ts  # Vitest config
 ├── docs/                     # Project documentation
 ├── plans/                    # Development plans (6 phases)
 ├── scripts/                  # Claude Code hooks (future)
+├── TESTING.md                # Integration testing checklist
 ├── docker-compose.yml        # PostgreSQL container
 ├── pnpm-workspace.yaml       # Monorepo workspace config
 └── tsconfig.base.json        # Shared TypeScript config
@@ -109,7 +124,7 @@ AppModule (root)
 ### PrismaService
 - **Lifecycle:** Connects on module init, disconnects on destroy
 - **Logging:** Development: error/warn, Production: error only
-- **Testing Utility:** `cleanDatabase()` for non-production environments
+- **Testing Utility:** `cleanDatabase()` for non-production environments (production guard)
 
 ### Bootstrap Configuration (main.ts)
 - **Port:** 3001 (configurable via PORT env)
@@ -117,6 +132,76 @@ AppModule (root)
 - **CORS:** Enabled for `http://localhost:3000` (configurable)
 - **Validation:** Global pipes with whitelist, transform, forbid non-whitelisted
 - **DTOs:** class-validator + class-transformer ready
+
+---
+
+## Testing Infrastructure (Phase 06)
+
+### Backend E2E Tests (Jest)
+Located in `apps/backend/test/`:
+
+**Configuration:**
+- **jest-e2e.json:** Configured for E2E testing with rootDir, testRegex, transform
+- **Database:** Uses `cleanDatabase()` before each test suite
+- **Environment:** Test database isolation
+
+**Test Suites:**
+1. **app.e2e-spec.ts** - App bootstrap and health checks
+2. **projects.e2e-spec.ts** - Projects CRUD operations (create, read, update, delete)
+3. **lock.e2e-spec.ts** - Lock mechanism (acquire, release, expiration, conflicts)
+4. **hook.e2e-spec.ts** - Hook API endpoints (check-platform, sync integration)
+
+**Coverage:**
+- All critical API endpoints
+- Lock mechanism edge cases
+- API key authentication flows
+- Database transaction integrity
+
+**Commands:**
+```bash
+cd apps/backend
+pnpm test:e2e  # Run all E2E tests
+```
+
+### Frontend Component Tests (Vitest)
+Located in `apps/frontend/__tests__/`:
+
+**Configuration:**
+- **vitest.config.ts:** Vitest setup with jsdom environment
+- **setup.tsx:** Mock providers (QueryClient, Router, WebSocket)
+
+**Test Suites:**
+1. **components/project-card.test.tsx** - ProjectCard rendering, interactions, states
+2. **components/lock-status.test.tsx** - LockStatus component UI states (locked/unlocked)
+
+**Mocking Strategy:**
+- TanStack Query with QueryClientProvider
+- Next.js router (useRouter, usePathname)
+- WebSocket connections
+- API responses
+
+**Commands:**
+```bash
+cd apps/frontend
+pnpm test      # Run all component tests
+pnpm test:ui   # Run with Vitest UI
+```
+
+### Integration Testing Checklist
+**Document:** `/TESTING.md`
+
+**Categories:**
+- Backend E2E tests (projects, locks, hooks)
+- Frontend component tests (ProjectCard, LockStatus)
+- Manual integration flows (project lifecycle, lock mechanism, docs management)
+- WebSocket real-time events
+- Performance benchmarks (API response times, load times)
+
+**Coverage Goals:**
+- Backend Controllers: 80%
+- Backend Services: 70%
+- Frontend Components: 60%
+- E2E Critical Paths: 100%
 
 ---
 
@@ -224,6 +309,11 @@ pnpm dev:frontend        # Frontend only
 
 # Database tools
 pnpm db:studio           # Prisma Studio UI (5555)
+
+# Testing (Phase 06)
+cd apps/backend && pnpm test:e2e    # Backend E2E tests (Jest)
+cd apps/frontend && pnpm test       # Frontend component tests (Vitest)
+cd apps/frontend && pnpm test:ui    # Vitest UI
 ```
 
 ---
@@ -311,13 +401,32 @@ GITHUB_TOKEN=ghp_xxx
 - [x] Lock acquisition/release on editor mount/unmount
 - [x] Real-time document synchronization via WebSocket
 
+### Phase 06 - Testing Infrastructure (COMPLETE)
+- [x] Backend E2E testing with Jest + Supertest
+- [x] PrismaService cleanDatabase() method with production guard
+- [x] E2E test configuration (jest-e2e.json)
+- [x] App E2E tests (bootstrap, health checks)
+- [x] Projects CRUD E2E tests (create, read, update, delete)
+- [x] Lock mechanism E2E tests (acquire, release, expiration, conflicts)
+- [x] Hook API E2E tests (check-platform integration)
+- [x] Frontend component testing with Vitest
+- [x] Vitest configuration (vitest.config.ts)
+- [x] Test setup with mocks (QueryClient, Router, WebSocket)
+- [x] ProjectCard component tests (rendering, interactions)
+- [x] LockStatus component tests (locked/unlocked states)
+- [x] Integration testing checklist (TESTING.md)
+- [x] Test coverage goals defined (Backend 70-80%, Frontend 60%, E2E 100%)
+
 ### Pending (Future Phases)
 - [ ] WebSocket real-time sync backend implementation (Phase 05)
 - [ ] GitHub Octokit push/pull integration (Phase 05)
-- [ ] Authentication & authorization (Phase 06)
+- [ ] Authentication & authorization (Phase 07)
 - [ ] CLI hooks for Claude Code (Phase 05)
-- [ ] End-to-end integration testing (Phase 06)
-- [ ] Performance optimization & production hardening (Phase 06)
+- [ ] Performance optimization & production hardening (Phase 07)
+- [ ] Playwright E2E tests for full user flows
+- [ ] Load testing for WebSocket connections
+- [ ] Security penetration testing
+- [ ] Accessibility testing (a11y)
 
 ---
 
@@ -331,9 +440,9 @@ GITHUB_TOKEN=ghp_xxx
 - **Declaration Maps:** Enabled for debugging
 
 ### Linting & Testing
-- **Backend:** ESLint configured, Jest ready
-- **Frontend:** Next.js built-in linting
-- **Coverage:** Jest configured with coverage directory
+- **Backend:** ESLint configured, Jest for E2E tests
+- **Frontend:** Next.js built-in linting, Vitest for component tests
+- **Coverage:** Jest configured with coverage directory, coverage goals set (70-80% backend, 60% frontend)
 
 ---
 
@@ -388,16 +497,18 @@ Schema changes require Phase 01 coordination.
 
 ## Metrics
 
-- **Total Files:** 120+ (excluding node_modules)
-- **Total Lines of Code:** ~22,000+ (Phase 04 additions)
-- **Backend LoC:** ~2,500+ (Phase 02 APIs)
-- **Frontend LoC:** ~12,000+ (Phase 03-04 with hooks, components, pages)
+- **Total Files:** 130+ (excluding node_modules)
+- **Total Lines of Code:** ~25,000+ (Phase 06 additions)
+- **Backend LoC:** ~3,000+ (Phase 02 APIs + E2E tests)
+- **Frontend LoC:** ~13,000+ (Phase 03-04 with hooks, components, pages, tests)
 - **Database Models:** 4
 - **UI Components:** 7 Shadcn (Button, Card, Input, Label, Badge, Skeleton, Dialog)
 - **Custom Components:** 9 (ProjectCard, Header, Sidebar, CreateProjectDialog, MonacoEditor, MarkdownPreview, FileTree, LockStatus, LockBanner)
 - **Custom Hooks:** 4 (use-projects.ts, use-docs.ts, use-lock.ts, use-websocket.ts)
 - **API Endpoints:** 15+ (Projects, Docs, Locks CRUD)
-- **Test Coverage:** Backend ~85% (Phase 02), Frontend pending (Phase 06)
+- **Backend E2E Tests:** 4 suites (app, projects, lock, hook)
+- **Frontend Component Tests:** 2 suites (ProjectCard, LockStatus)
+- **Test Coverage:** Backend ~85% (Phase 02), Frontend ~60% (Phase 06)
 
 ### Phase 04 Frontend Files Added
 **Hooks:** 4 custom hooks (use-projects, use-docs, use-lock, use-websocket)
@@ -406,6 +517,13 @@ Schema changes require Phase 01 coordination.
 **Store Updates:** editorDirty, createDialogOpen states in ui-store.ts
 **Styling:** Brand colors (#0DA8D6 cyan, #333232 dark), success color (#22C55E)
 **Features:** Auto-save, lock management, real-time sync, dirty state tracking
+
+### Phase 06 Testing Files Added
+**Backend Tests:** 4 E2E test suites (app, projects, lock, hook) in `test/`
+**Frontend Tests:** 2 component test suites (project-card, lock-status) in `__tests__/`
+**Configuration:** jest-e2e.json, vitest.config.ts, setup.tsx
+**Documentation:** TESTING.md integration checklist
+**Database:** cleanDatabase() method in PrismaService with production guard
 
 ---
 

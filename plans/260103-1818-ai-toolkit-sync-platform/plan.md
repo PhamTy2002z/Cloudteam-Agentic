@@ -197,7 +197,7 @@ playwright.config.ts
 | 03 | [phase-03-frontend-foundation.md](./phase-03-frontend-foundation.md) | Next.js, Shadcn, state | ✅ DONE (2026-01-03) |
 | 04 | [phase-04-frontend-features.md](./phase-04-frontend-features.md) | Pages, components, hooks | ✅ DONE (2026-01-03) |
 | 05 | [phase-05-backend-realtime-hooks.md](./phase-05-backend-realtime-hooks.md) | WebSocket, Claude hooks | ✅ DONE (2026-01-03) |
-| 06 | [phase-06-integration-testing.md](./phase-06-integration-testing.md) | E2E, unit tests | Pending |
+| 06 | [phase-06-integration-testing.md](./phase-06-integration-testing.md) | E2E, unit tests | ✅ DONE (2026-01-03) |
 
 ---
 
