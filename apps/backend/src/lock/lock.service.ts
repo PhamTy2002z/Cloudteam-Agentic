@@ -4,12 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsGateway } from '../websocket/websocket.gateway';
 
 const DEFAULT_LOCK_TTL_MINUTES = 30;
 
 @Injectable()
 export class LockService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsGateway,
+  ) {}
 
   async getLock(projectId: string) {
     const lock = await this.prisma.lock.findUnique({
@@ -26,7 +30,7 @@ export class LockService {
 
   async acquireLock(projectId: string, lockedBy: string, reason?: string) {
     // Use transaction with serializable isolation to prevent race conditions
-    return this.prisma.$transaction(
+    const lock = await this.prisma.$transaction(
       async (tx) => {
         // Check for existing lock within transaction
         const existingLock = await tx.lock.findUnique({
@@ -71,6 +75,15 @@ export class LockService {
         timeout: 5000,
       },
     );
+
+    // Broadcast lock acquired event
+    this.notifications.notifyLockAcquired(
+      projectId,
+      lockedBy,
+      lock.lockedAt.toISOString(),
+    );
+
+    return lock;
   }
 
   async releaseLock(projectId: string) {
@@ -85,6 +98,9 @@ export class LockService {
     await this.prisma.lock.delete({
       where: { projectId },
     });
+
+    // Broadcast lock released event
+    this.notifications.notifyLockReleased(projectId);
 
     return { released: true };
   }
