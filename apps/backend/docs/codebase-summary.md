@@ -17,6 +17,9 @@
 ### Core Dependencies
 - **NestJS**: 10.3.0 - Progressive Node.js framework
 - **Prisma**: 5.10.0 - Type-safe database ORM
+- **Socket.IO**: ^4.8.1 - Real-time WebSocket communication (Phase 05)
+- **@nestjs/websockets**: ^10.4.12 - NestJS WebSocket integration (Phase 05)
+- **@nestjs/platform-socket.io**: ^10.4.12 - Socket.IO adapter (Phase 05)
 - **class-validator**: 0.14.1 - DTO validation
 - **class-transformer**: 0.5.1 - Object transformation
 - **@octokit/rest**: 20.0.0 - GitHub API client
@@ -39,6 +42,8 @@ backend/src/
 │   ├── guards/          # ApiKeyGuard
 │   ├── filters/         # GlobalExceptionFilter
 │   └── decorators/      # @CurrentProject
+├── websocket/           # WebSocket gateway (Phase 05)
+├── hook/                # Hook API endpoints (Phase 05)
 ├── projects/            # Project CRUD + API keys
 ├── docs/                # Document sync & management
 ├── lock/                # TTL-based locking system
@@ -84,7 +89,125 @@ backend/src/
 
 ## Core Modules
 
-### 1. Projects Module
+### 1. WebSocket Module (Phase 05)
+
+**Chức năng**:
+- Real-time notifications cho project events
+- Socket.IO-based WebSocket gateway
+- API key authentication cho WebSocket connections
+- Room-based event broadcasting
+
+**Gateway**: `NotificationsGateway`
+- **Connection authentication**: API key validation qua handshake
+- **Room management**: Join/leave project rooms (`project:{projectId}`)
+- **Event types**:
+  - `lock:acquired` - Project được lock
+  - `lock:released` - Project được unlock
+  - `doc:updated` - Document được cập nhật
+
+**Connection Flow**:
+```typescript
+// Client connects with API key
+socket.connect({
+  auth: { apiKey: 'sk_xxx' },
+  // or via header: { 'x-api-key': 'sk_xxx' }
+  // or via query: ?apiKey=sk_xxx
+});
+
+// Server validates API key → Prisma lookup
+// Store projectId in socket.data
+// Auto-disconnect if invalid/inactive key
+```
+
+**Client Messages**:
+- `join` - Join project room (requires JoinMessage with projectId)
+- `leave` - Leave project room
+
+**Server Events**:
+- `lock:acquired` - Broadcast khi lock được acquire
+- `lock:released` - Broadcast khi lock được release
+- `doc:updated` - Broadcast khi document được update
+
+**Security**:
+- CUID pattern validation (`/^c[a-z0-9]{24}$/`)
+- Project-scoped rooms (clients chỉ join được project của mình)
+- Authentication required cho tất cả operations
+
+**CORS Configuration**:
+```typescript
+cors: {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}
+```
+
+**Integration**:
+- Global module exported to all services
+- `LockService` gọi `notifyLockAcquired/Released()`
+- `DocsService` sẽ gọi `notifyDocUpdated()` (future)
+
+### 2. Hook Module (Phase 05)
+
+**Chức năng**:
+- API endpoints cho Claude Code hooks integration
+- Pre-session lock status checks
+- Docs sync với hash comparison
+- Bridge giữa CLI scripts và backend services
+
+**API Endpoints**:
+```
+GET  /api/hook/status/:projectId   - Check lock status
+GET  /api/hook/docs/:projectId     - Get docs hash
+POST /api/hook/sync/:projectId     - Sync docs to local
+```
+
+**Authentication**: `@UseGuards(ApiKeyGuard)` - Requires `X-API-Key` header
+
+**Response Types**:
+
+**Status Response** (`HookStatusResponse`):
+```typescript
+{
+  locked: boolean;
+  lockedBy?: string;    // User/process identifier
+  lockedAt?: string;    // ISO timestamp
+  expiresAt?: string;   // Lock expiration
+}
+```
+
+**Docs Hash Response** (`HookDocsHashResponse`):
+```typescript
+{
+  hash: string;         // Aggregate SHA-256 hash
+  docsCount: number;    // Total docs in project
+}
+```
+
+**Sync Response** (`HookSyncResponse`):
+```typescript
+{
+  docs: [
+    {
+      fileName: string;   // e.g., "code-standards.md"
+      content: string;    // Full markdown content
+      hash: string;       // Individual doc hash
+    }
+  ],
+  hash: string;          // Aggregate hash
+}
+```
+
+**Integration với Scripts**:
+- `check-platform.sh` → `GET /hook/status/:projectId`
+- `check-platform.sh` → `GET /hook/docs/:projectId` (hash comparison)
+- `check-platform.sh` → `POST /hook/sync/:projectId` (nếu outdated)
+
+**Use Cases**:
+1. **Pre-session check**: Claude Code hook kiểm tra lock trước khi start
+2. **Docs sync**: So sánh hash, chỉ sync khi có changes
+3. **Offline mode**: Scripts cache `.docs/.sync-hash` để fallback
+
+### 3. Projects Module
 
 **Chức năng**:
 - CRUD operations cho projects
@@ -139,13 +262,14 @@ POST /api/projects/:projectId/docs/:fileName/push - Push về GitHub
 **DTOs**:
 - `UpdateDocDto`: content (required string)
 
-### 3. Lock Module
+### 4. Lock Module (Updated Phase 05)
 
 **Chức năng**:
 - Acquire/release project locks
 - TTL-based expiration (30 phút default)
 - Race condition prevention với database transactions
 - Lock extension mechanism
+- **WebSocket notifications** cho lock events (Phase 05)
 
 **API Endpoints**:
 ```
@@ -168,11 +292,29 @@ await prisma.$transaction(
 )
 ```
 
+**WebSocket Integration** (Phase 05):
+```typescript
+// After successful lock acquisition
+this.notifications.notifyLockAcquired(
+  projectId,
+  lockedBy,
+  lock.lockedAt.toISOString(),
+);
+
+// After lock release
+this.notifications.notifyLockReleased(projectId);
+```
+
+**Real-time Events**:
+- Clients trong `project:{projectId}` room nhận lock events
+- Frontend có thể show notifications/UI updates
+- Prevents multiple users editing simultaneously
+
 **DTOs**:
 - `AcquireLockDto`: lockedBy (required), reason? (optional)
 - `ExtendLockDto`: minutes? (optional)
 
-### 4. GitHub Service
+### 5. GitHub Service
 
 **Chức năng**:
 - Octokit wrapper cho GitHub API
@@ -194,7 +336,7 @@ await prisma.$transaction(
 parseRepoUrl(repoUrl: string): { owner: string; repo: string }
 ```
 
-### 5. Common Services
+### 6. Common Services
 
 #### CryptoService
 
@@ -365,8 +507,8 @@ pnpm lint         # ESLint
 - [ ] Add pagination cho list endpoints
 
 ### Feature Enhancements
-- [ ] WebSocket support cho real-time lock notifications (Phase 05)
-- [ ] Hook API cho CLI integration (Phase 05)
+- [x] WebSocket support cho real-time lock notifications (Phase 05)
+- [x] Hook API cho CLI integration (Phase 05)
 - [ ] Swagger/OpenAPI documentation
 - [ ] Health check endpoints
 
@@ -376,11 +518,16 @@ pnpm lint         # ESLint
 AppModule
 ├── ConfigModule (global)
 ├── PrismaModule
+├── WebSocketModule (global - Phase 05)
+├── HookModule (Phase 05)
+│   ├── DocsModule (imported)
+│   └── LockModule (imported)
 ├── ProjectsModule
 │   └── CryptoModule (imported)
 ├── DocsModule
 │   └── GitHubModule (imported)
 ├── LockModule
+│   └── WebSocketModule (injected - Phase 05)
 └── GitHubModule
 ```
 
@@ -388,15 +535,17 @@ AppModule
 
 1. **Module encapsulation**: Mỗi domain có controller, service, module riêng
 2. **Service exports**: Services exported cho cross-module usage
-3. **DTO validation**: Input validation với class-validator
-4. **Exception filters**: Centralized error handling
-5. **Guard-based auth**: Decorator + Guard pattern cho authentication
-6. **Transaction safety**: Database transactions cho critical operations
-7. **Environment-based config**: ConfigService cho sensitive data
+3. **Global modules**: WebSocketModule exported globally (Phase 05)
+4. **DTO validation**: Input validation với class-validator
+5. **Exception filters**: Centralized error handling
+6. **Guard-based auth**: Decorator + Guard pattern cho authentication
+7. **Transaction safety**: Database transactions cho critical operations
+8. **Environment-based config**: ConfigService cho sensitive data
+9. **Event-driven architecture**: WebSocket events cho real-time updates (Phase 05)
 
 ---
 
 **Generated**: 2026-01-03
-**Phase**: 02 - Backend Core Services
-**Status**: Implementation Complete (82/82 tests passing)
-**Next**: Phase 05 - WebSocket & Hook Integration
+**Phase**: 05 - Backend Real-time & Hooks API
+**Status**: Implementation Complete
+**Features**: WebSocket Gateway, Hook API, Lock Notifications, CLI Integration
