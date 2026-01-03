@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LockService } from './lock.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsGateway } from '../websocket/websocket.gateway';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
 describe('LockService', () => {
@@ -34,11 +35,18 @@ describe('LockService', () => {
     $transaction: jest.fn(),
   };
 
+  const mockNotificationsGateway = {
+    notifyLockAcquired: jest.fn(),
+    notifyLockReleased: jest.fn(),
+    notifyDocUpdated: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LockService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: NotificationsGateway, useValue: mockNotificationsGateway },
       ],
     }).compile();
 
