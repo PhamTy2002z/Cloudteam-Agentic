@@ -47,9 +47,15 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        slate: {
-          850: '#1E293B',
-          950: '#0F172A',
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        brand: {
+          cyan: '#0DA8D6',
+          dark: '#333232',
+          'dark-lighter': '#3d3c3c',
+          'dark-darker': '#1a1a1a',
         },
       },
       borderRadius: {

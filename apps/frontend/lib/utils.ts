@@ -19,7 +19,7 @@ export function formatRelativeTime(date: Date | string): string {
   return `${diffDays} days ago`;
 }
 
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: string[]) => void>(
   fn: T,
   delay: number,
 ): (...args: Parameters<T>) => void {
