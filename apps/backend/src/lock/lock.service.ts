@@ -25,33 +25,52 @@ export class LockService {
   }
 
   async acquireLock(projectId: string, lockedBy: string, reason?: string) {
-    const existingLock = await this.getLock(projectId);
-    if (existingLock) {
-      throw new ConflictException({
-        message: 'Project is already locked',
-        lockedBy: existingLock.lockedBy,
-        lockedAt: existingLock.lockedAt,
-      });
-    }
+    // Use transaction with serializable isolation to prevent race conditions
+    return this.prisma.$transaction(
+      async (tx) => {
+        // Check for existing lock within transaction
+        const existingLock = await tx.lock.findUnique({
+          where: { projectId },
+        });
 
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-    });
-    if (!project) {
-      throw new NotFoundException(`Project ${projectId} not found`);
-    }
+        if (existingLock) {
+          // Check if expired
+          if (existingLock.expiresAt && existingLock.expiresAt < new Date()) {
+            await tx.lock.delete({ where: { projectId } });
+          } else {
+            throw new ConflictException({
+              message: 'Project is already locked',
+              lockedBy: existingLock.lockedBy,
+              lockedAt: existingLock.lockedAt,
+            });
+          }
+        }
 
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + DEFAULT_LOCK_TTL_MINUTES);
+        // Verify project exists
+        const project = await tx.project.findUnique({
+          where: { id: projectId },
+        });
+        if (!project) {
+          throw new NotFoundException(`Project ${projectId} not found`);
+        }
 
-    return this.prisma.lock.create({
-      data: {
-        projectId,
-        lockedBy,
-        reason,
-        expiresAt,
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + DEFAULT_LOCK_TTL_MINUTES);
+
+        return tx.lock.create({
+          data: {
+            projectId,
+            lockedBy,
+            reason,
+            expiresAt,
+          },
+        });
       },
-    });
+      {
+        isolationLevel: 'Serializable',
+        timeout: 5000,
+      },
+    );
   }
 
   async releaseLock(projectId: string) {

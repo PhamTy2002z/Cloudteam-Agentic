@@ -1,19 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../common/services/crypto.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { randomBytes } from 'crypto';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private crypto: CryptoService,
+  ) {}
 
   async create(dto: CreateProjectDto) {
+    const encryptedToken = this.crypto.encrypt(dto.token);
     return this.prisma.project.create({
       data: {
         name: dto.name,
         repoUrl: dto.repoUrl,
-        token: dto.token,
+        token: encryptedToken,
         branch: dto.branch || 'main',
         docsPath: dto.docsPath || 'docs',
       },
@@ -78,5 +83,10 @@ export class ProjectsService {
       where: { id: keyId },
       data: { isActive: false },
     });
+  }
+
+  async getDecryptedToken(projectId: string): Promise<string> {
+    const project = await this.findOne(projectId);
+    return this.crypto.decrypt(project.token);
   }
 }

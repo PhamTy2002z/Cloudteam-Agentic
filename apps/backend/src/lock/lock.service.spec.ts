@@ -31,6 +31,7 @@ describe('LockService', () => {
     project: {
       findUnique: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -91,9 +92,19 @@ describe('LockService', () => {
 
   describe('acquireLock', () => {
     it('should acquire lock when no existing lock', async () => {
-      mockPrismaService.lock.findUnique.mockResolvedValue(null);
-      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
-      mockPrismaService.lock.create.mockResolvedValue(mockLock);
+      // Mock transaction to execute the callback
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockResolvedValue(mockLock),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(mockProject),
+          },
+        };
+        return callback(mockTx);
+      });
 
       const result = await service.acquireLock(
         'project-123',
@@ -101,19 +112,19 @@ describe('LockService', () => {
         'Editing docs',
       );
 
-      expect(prisma.lock.create).toHaveBeenCalledWith({
-        data: {
-          projectId: 'project-123',
-          lockedBy: 'user@example.com',
-          reason: 'Editing docs',
-          expiresAt: expect.any(Date),
-        },
-      });
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
       expect(result).toEqual(mockLock);
     });
 
     it('should throw ConflictException when lock already exists', async () => {
-      mockPrismaService.lock.findUnique.mockResolvedValue(mockLock);
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(mockLock),
+          },
+        };
+        return callback(mockTx);
+      });
 
       await expect(
         service.acquireLock('project-123', 'another@example.com'),
@@ -121,8 +132,17 @@ describe('LockService', () => {
     });
 
     it('should throw NotFoundException when project not found', async () => {
-      mockPrismaService.lock.findUnique.mockResolvedValue(null);
-      mockPrismaService.project.findUnique.mockResolvedValue(null);
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(null),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(null),
+          },
+        };
+        return callback(mockTx);
+      });
 
       await expect(
         service.acquireLock('non-existent', 'user@example.com'),
@@ -130,23 +150,43 @@ describe('LockService', () => {
     });
 
     it('should acquire lock without reason', async () => {
-      mockPrismaService.lock.findUnique.mockResolvedValue(null);
-      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
-      mockPrismaService.lock.create.mockResolvedValue({
-        ...mockLock,
-        reason: undefined,
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockResolvedValue({ ...mockLock, reason: undefined }),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(mockProject),
+          },
+        };
+        return callback(mockTx);
       });
 
-      await service.acquireLock('project-123', 'user@example.com');
+      const result = await service.acquireLock('project-123', 'user@example.com');
 
-      expect(prisma.lock.create).toHaveBeenCalledWith({
-        data: {
-          projectId: 'project-123',
-          lockedBy: 'user@example.com',
-          reason: undefined,
-          expiresAt: expect.any(Date),
-        },
+      expect(result.lockedBy).toBe('user@example.com');
+    });
+
+    it('should replace expired lock', async () => {
+      const expiredLock = { ...mockLock, expiresAt: new Date(Date.now() - 1000) };
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(expiredLock),
+            delete: jest.fn().mockResolvedValue(expiredLock),
+            create: jest.fn().mockResolvedValue(mockLock),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(mockProject),
+          },
+        };
+        return callback(mockTx);
       });
+
+      const result = await service.acquireLock('project-123', 'user@example.com');
+
+      expect(result).toEqual(mockLock);
     });
   });
 

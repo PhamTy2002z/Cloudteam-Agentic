@@ -150,6 +150,6 @@ export class GitHubService {
   }
 
   computeHash(content: string): string {
-    return createHash('md5').update(content).digest('hex');
+    return createHash('sha256').update(content).digest('hex');
   }
 }

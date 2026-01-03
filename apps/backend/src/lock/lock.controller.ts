@@ -7,6 +7,8 @@ import {
   Body,
 } from '@nestjs/common';
 import { LockService } from './lock.service';
+import { AcquireLockDto } from './dto/acquire-lock.dto';
+import { ExtendLockDto } from './dto/extend-lock.dto';
 
 @Controller('projects/:projectId/lock')
 export class LockController {
@@ -20,10 +22,9 @@ export class LockController {
   @Post()
   acquireLock(
     @Param('projectId') projectId: string,
-    @Body('lockedBy') lockedBy: string,
-    @Body('reason') reason?: string,
+    @Body() dto: AcquireLockDto,
   ) {
-    return this.lockService.acquireLock(projectId, lockedBy, reason);
+    return this.lockService.acquireLock(projectId, dto.lockedBy, dto.reason);
   }
 
   @Delete()
@@ -34,8 +35,8 @@ export class LockController {
   @Post('extend')
   extendLock(
     @Param('projectId') projectId: string,
-    @Body('minutes') minutes?: number,
+    @Body() dto: ExtendLockDto,
   ) {
-    return this.lockService.extendLock(projectId, minutes);
+    return this.lockService.extendLock(projectId, dto.minutes);
   }
 }

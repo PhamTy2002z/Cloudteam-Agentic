@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectsService } from './projects.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../common/services/crypto.service';
 import { NotFoundException } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -13,7 +14,7 @@ describe('ProjectsService', () => {
     id: 'project-123',
     name: 'Test Project',
     repoUrl: 'https://github.com/test/repo',
-    token: 'ghp_test_token',
+    token: 'encrypted_token',
     branch: 'main',
     docsPath: 'docs',
     createdAt: new Date(),
@@ -34,11 +35,18 @@ describe('ProjectsService', () => {
     },
   };
 
+  const mockCryptoService = {
+    encrypt: jest.fn().mockReturnValue('encrypted_token'),
+    decrypt: jest.fn().mockReturnValue('ghp_test_token'),
+    computeHash: jest.fn().mockReturnValue('hash123'),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectsService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: CryptoService, useValue: mockCryptoService },
       ],
     }).compile();
 
@@ -73,7 +81,7 @@ describe('ProjectsService', () => {
         data: {
           name: dto.name,
           repoUrl: dto.repoUrl,
-          token: dto.token,
+          token: 'encrypted_token',
           branch: dto.branch,
           docsPath: dto.docsPath,
         },
@@ -101,7 +109,7 @@ describe('ProjectsService', () => {
         data: {
           name: dto.name,
           repoUrl: dto.repoUrl,
-          token: dto.token,
+          token: 'encrypted_token',
           branch: 'main',
           docsPath: 'docs',
         },

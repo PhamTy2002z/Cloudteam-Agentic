@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { LockController } from './lock.controller';
 import { LockService } from './lock.service';
+import { AcquireLockDto } from './dto/acquire-lock.dto';
+import { ExtendLockDto } from './dto/extend-lock.dto';
 
 describe('LockController', () => {
   let controller: LockController;
@@ -59,13 +61,10 @@ describe('LockController', () => {
 
   describe('acquireLock', () => {
     it('should acquire a lock', async () => {
+      const dto: AcquireLockDto = { lockedBy: 'user@example.com', reason: 'Editing docs' };
       mockLockService.acquireLock.mockResolvedValue(mockLock);
 
-      const result = await controller.acquireLock(
-        'project-123',
-        'user@example.com',
-        'Editing docs',
-      );
+      const result = await controller.acquireLock('project-123', dto);
 
       expect(service.acquireLock).toHaveBeenCalledWith(
         'project-123',
@@ -76,15 +75,13 @@ describe('LockController', () => {
     });
 
     it('should acquire a lock without reason', async () => {
+      const dto: AcquireLockDto = { lockedBy: 'user@example.com' };
       mockLockService.acquireLock.mockResolvedValue({
         ...mockLock,
         reason: undefined,
       });
 
-      const result = await controller.acquireLock(
-        'project-123',
-        'user@example.com',
-      );
+      const result = await controller.acquireLock('project-123', dto);
 
       expect(service.acquireLock).toHaveBeenCalledWith(
         'project-123',
@@ -108,26 +105,28 @@ describe('LockController', () => {
 
   describe('extendLock', () => {
     it('should extend a lock with default TTL', async () => {
+      const dto: ExtendLockDto = {};
       const extendedLock = {
         ...mockLock,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       };
       mockLockService.extendLock.mockResolvedValue(extendedLock);
 
-      const result = await controller.extendLock('project-123');
+      const result = await controller.extendLock('project-123', dto);
 
       expect(service.extendLock).toHaveBeenCalledWith('project-123', undefined);
       expect(result.expiresAt).toBeDefined();
     });
 
     it('should extend a lock with custom TTL', async () => {
+      const dto: ExtendLockDto = { minutes: 60 };
       const extendedLock = {
         ...mockLock,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       };
       mockLockService.extendLock.mockResolvedValue(extendedLock);
 
-      const result = await controller.extendLock('project-123', 60);
+      const result = await controller.extendLock('project-123', dto);
 
       expect(service.extendLock).toHaveBeenCalledWith('project-123', 60);
       expect(result).toEqual(extendedLock);

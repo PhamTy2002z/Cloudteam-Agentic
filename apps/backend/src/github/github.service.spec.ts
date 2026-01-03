@@ -52,9 +52,9 @@ describe('GitHubService', () => {
   });
 
   describe('computeHash', () => {
-    it('should compute MD5 hash of content', () => {
+    it('should compute SHA-256 hash of content', () => {
       const hash = service.computeHash('test content');
-      expect(hash).toBe('9473fdd0d880a43c21b7778d34872157');
+      expect(hash).toBe('6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72');
     });
 
     it('should return different hash for different content', () => {
@@ -71,17 +71,17 @@ describe('GitHubService', () => {
 
     it('should handle empty string', () => {
       const hash = service.computeHash('');
-      expect(hash).toBe('d41d8cd98f00b204e9800998ecf8427e');
+      expect(hash).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
     });
 
     it('should handle unicode content', () => {
       const hash = service.computeHash('Hello World');
-      expect(hash).toHaveLength(32);
+      expect(hash).toHaveLength(64); // SHA-256 produces 64 hex chars
     });
 
-    it('should produce 32-character hex string', () => {
+    it('should produce 64-character hex string', () => {
       const hash = service.computeHash('any content');
-      expect(hash).toMatch(/^[a-f0-9]{32}$/);
+      expect(hash).toMatch(/^[a-f0-9]{64}$/);
     });
   });
 
