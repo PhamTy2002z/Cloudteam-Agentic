@@ -26,4 +26,21 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async onModuleDestroy() {
     await this.$disconnect();
   }
+
+  /**
+   * Clean database for E2E testing - deletes all data in correct order
+   * DANGER: Only use in test environment
+   */
+  async cleanDatabase() {
+    // Production guard - prevent accidental data wipe
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('cleanDatabase() cannot be called in production');
+    }
+
+    // Delete in order respecting foreign key constraints
+    await this.lock.deleteMany();
+    await this.apiKey.deleteMany();
+    await this.doc.deleteMany();
+    await this.project.deleteMany();
+  }
 }
