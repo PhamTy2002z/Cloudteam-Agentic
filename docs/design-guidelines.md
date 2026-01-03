@@ -7,33 +7,43 @@ Design system for a developer-focused docs synchronization platform. Emphasizes 
 
 ## Color Palette
 
-### Dark Theme (Primary)
+### Brand Colors (Phase 04)
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `--bg-primary` | `#0F172A` | Main background |
-| `--bg-secondary` | `#1E293B` | Cards, panels |
-| `--bg-tertiary` | `#334155` | Elevated elements |
-| `--border` | `#475569` | Borders, dividers |
-| `--text-primary` | `#F1F5F9` | Primary text |
-| `--text-secondary` | `#94A3B8` | Secondary text |
-| `--text-muted` | `#64748B` | Muted text, placeholders |
+| `--brand-cyan` | `#0DA8D6` | Primary brand accent, CTAs |
+| `--brand-dark` | `#333232` | Main dark background |
+| `--brand-dark-lighter` | `#3D3C3C` | Elevated surfaces |
+| `--brand-dark-darker` | `#1A1A1A` | Deepest backgrounds |
+
+### Dark Theme (Primary)
+| Token | Hex/HSL | Usage |
+|-------|---------|-------|
+| `--background` | `hsl(0 0% 10%)` | Main background |
+| `--foreground` | `hsl(0 0% 95%)` | Primary text |
+| `--card` | `hsl(0 0% 13%)` | Cards, panels |
+| `--card-foreground` | `hsl(0 0% 95%)` | Card text |
+| `--border` | `hsl(0 0% 22%)` | Borders, dividers |
+| `--muted` | `hsl(0 0% 18%)` | Muted backgrounds |
+| `--muted-foreground` | `hsl(0 0% 60%)` | Muted text, placeholders |
 
 ### Accent Colors
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `--accent-primary` | `#3B82F6` | Primary actions, links |
-| `--accent-hover` | `#2563EB` | Hover states |
-| `--success` | `#22C55E` | Unlocked status, success |
-| `--error` | `#EF4444` | Locked status, errors |
-| `--warning` | `#F59E0B` | Warnings, pending states |
+| Token | Hex/HSL | Usage |
+|-------|---------|-------|
+| `--primary` | `hsl(191 89% 45%)` | #0DA8D6 - Primary actions, links |
+| `--primary-foreground` | `hsl(0 0% 100%)` | Text on primary bg |
+| `--success` | `hsl(142 71% 45%)` | #22C55E - Unlocked status, success |
+| `--success-foreground` | `hsl(0 0% 100%)` | Text on success bg |
+| `--destructive` | `hsl(0 62% 30%)` | Locked status, errors (dark) |
+| `--destructive-foreground` | `hsl(0 0% 95%)` | Text on destructive bg |
 
 ### Light Theme
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `--bg-primary-light` | `#FFFFFF` | Main background |
-| `--bg-secondary-light` | `#F8FAFC` | Cards, panels |
-| `--text-primary-light` | `#0F172A` | Primary text |
-| `--text-secondary-light` | `#475569` | Secondary text |
+| Token | Hex/HSL | Usage |
+|-------|---------|-------|
+| `--background` | `hsl(0 0% 100%)` | Main background |
+| `--foreground` | `hsl(0 0% 15%)` | Primary text |
+| `--card` | `hsl(0 0% 100%)` | Cards, panels |
+| `--border` | `hsl(0 0% 90%)` | Borders, dividers |
+| `--muted-foreground` | `hsl(0 0% 45%)` | Muted text |
 
 ---
 
@@ -102,7 +112,7 @@ Based on 4px base unit:
 **Primary Button**
 ```css
 .btn-primary {
-  background: #3B82F6;
+  background: hsl(191 89% 45%); /* #0DA8D6 brand cyan */
   color: #FFFFFF;
   padding: 8px 16px;
   border-radius: 6px;
@@ -110,7 +120,7 @@ Based on 4px base unit:
   transition: background 150ms;
 }
 .btn-primary:hover {
-  background: #2563EB;
+  background: hsl(191 89% 40%); /* Darker cyan */
 }
 ```
 
@@ -118,8 +128,8 @@ Based on 4px base unit:
 ```css
 .btn-secondary {
   background: transparent;
-  border: 1px solid #475569;
-  color: #F1F5F9;
+  border: 1px solid hsl(0 0% 22%);
+  color: hsl(0 0% 95%);
   padding: 8px 16px;
   border-radius: 6px;
 }
@@ -128,7 +138,7 @@ Based on 4px base unit:
 **Danger Button**
 ```css
 .btn-danger {
-  background: #DC2626;
+  background: hsl(0 84% 60%);
   color: #FFFFFF;
 }
 ```
@@ -136,8 +146,8 @@ Based on 4px base unit:
 ### Cards
 ```css
 .card {
-  background: #1E293B;
-  border: 1px solid #334155;
+  background: hsl(0 0% 13%); /* --card */
+  border: 1px solid hsl(0 0% 22%); /* --border */
   border-radius: 8px;
   padding: 16px;
 }
@@ -146,16 +156,16 @@ Based on 4px base unit:
 ### Form Inputs
 ```css
 .input {
-  background: #0F172A;
-  border: 1px solid #475569;
+  background: hsl(0 0% 10%); /* --background */
+  border: 1px solid hsl(0 0% 22%); /* --border */
   border-radius: 6px;
   padding: 8px 12px;
-  color: #F1F5F9;
+  color: hsl(0 0% 95%); /* --foreground */
 }
 .input:focus {
-  border-color: #3B82F6;
+  border-color: hsl(191 89% 45%); /* --primary */
   outline: none;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 2px hsla(191, 89%, 45%, 0.2);
 }
 ```
 
@@ -177,14 +187,16 @@ Based on 4px base unit:
 
 ### Sidebar Navigation
 - Width: 240px (desktop), collapsible
-- Background: `--bg-secondary`
+- Background: `--brand-dark` (#333232)
 - Logo area: 64px height
 - Nav items: 40px height, 8px padding
+- Active state: `--brand-cyan` (#0DA8D6) accent
 
 ### Content Area
 - Max-width: 1200px (centered)
 - Padding: 24px
 - Card grid: 1 col mobile, 2-3 cols desktop
+- Background: `--brand-dark` (#333232)
 
 ### Responsive Breakpoints
 | Name | Width | Usage |
@@ -271,4 +283,4 @@ docs/wireframes/
 
 ---
 
-*Last updated: 2026-01-03*
+*Last updated: 2026-01-03 (Phase 04 - Brand colors integration)*

@@ -3,11 +3,16 @@
 ---
 phase: 02
 title: Backend Core Services
-status: pending
-effort: 8h
+status: done
+effort: 8h (actual: 10h including security fixes)
 parallelization: Can run in PARALLEL with Phase 03
 depends_on: [phase-01]
 blocks: [phase-05, phase-06]
+review_date: 2026-01-03
+completion_date: 2026-01-03
+review_report: plans/reports/code-reviewer-260103-2013-phase02-backend-review.md
+critical_issues_fixed: 5
+high_priority_issues_fixed: 4
 ---
 
 ## Overview
@@ -1000,20 +1005,45 @@ curl -X POST http://localhost:3001/api/projects \
 
 ## Success Criteria
 
-- [ ] `pnpm dev` starts NestJS without errors
-- [ ] `GET /api/projects` returns empty array
-- [ ] `POST /api/projects` creates project
-- [ ] `POST /api/projects/:id/lock` acquires lock
-- [ ] `DELETE /api/projects/:id/lock` releases lock
-- [ ] `POST /api/projects/:id/api-keys` generates API key
-- [ ] GlobalExceptionFilter handles errors properly
+**Implementation Status:**
+- [x] `pnpm dev` starts NestJS without errors
+- [x] `GET /api/projects` returns empty array
+- [x] `POST /api/projects` creates project
+- [x] `POST /api/projects/:id/lock` acquires lock
+- [x] `DELETE /api/projects/:id/lock` releases lock
+- [x] `POST /api/projects/:id/api-keys` generates API key
+- [x] GlobalExceptionFilter handles errors properly
+- [x] 83 tests passing across 7 test suites
+- [x] TypeScript compilation successful
+- [x] Build process successful
+
+**Critical Security Fixes Applied:**
+- [x] GitHub token encryption (AES-256-GCM) via CryptoService
+- [x] SHA-256 content hashing (replaced MD5)
+- [x] Lock acquisition race condition fixed (Prisma Serializable transaction)
+- [x] Input validation DTOs for lock endpoints
+- [x] Token exposure prevented in API responses
+- [x] API key hashing with bcrypt
+- [x] Rate limiting (100 req/min) with @nestjs/throttler
+- [x] Parallel GitHub API calls in getAllDocs()
+- [x] Transaction wrapper for document sync
+
+**Review Summary:**
+- Build: ✅ PASSING
+- Tests: ✅ 83/83 passing
+- Security: ✅ ALL CRITICAL ISSUES RESOLVED
+- Quality: ✅ PRODUCTION-READY
+- Full report: plans/reports/code-reviewer-260103-2013-phase02-backend-review.md
 
 ## Handoff to Phase 05
 
 **Phase 05 depends on:**
-- LockService exported for WebSocket gateway
-- DocsService exported for hook API
-- ApiKeyGuard ready for hook authentication
+- LockService exported for WebSocket gateway ✅
+- DocsService exported for hook API ✅
+- ApiKeyGuard ready for hook authentication ✅ (with bcrypt hashing)
+- CryptoService for token encryption/decryption ✅
+
+**Status:** ✅ READY FOR PHASE 05
 
 ---
 

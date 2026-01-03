@@ -3,7 +3,7 @@
 ---
 phase: 04
 title: Frontend Features
-status: pending
+status: done
 effort: 8h
 parallelization: Can run in PARALLEL with Phase 05
 depends_on: [phase-03]

@@ -193,9 +193,9 @@ playwright.config.ts
 | Phase | File | Description | Status |
 |-------|------|-------------|--------|
 | 01 | [phase-01-infrastructure-database.md](./phase-01-infrastructure-database.md) | Prisma, Docker, env setup | ✅ DONE (2026-01-03) |
-| 02 | [phase-02-backend-core-services.md](./phase-02-backend-core-services.md) | NestJS controllers/services | Pending |
+| 02 | [phase-02-backend-core-services.md](./phase-02-backend-core-services.md) | NestJS controllers/services | ✅ DONE (2026-01-03) |
 | 03 | [phase-03-frontend-foundation.md](./phase-03-frontend-foundation.md) | Next.js, Shadcn, state | ✅ DONE (2026-01-03) |
-| 04 | [phase-04-frontend-features.md](./phase-04-frontend-features.md) | Pages, components, hooks | Pending |
+| 04 | [phase-04-frontend-features.md](./phase-04-frontend-features.md) | Pages, components, hooks | ✅ DONE (2026-01-03) |
 | 05 | [phase-05-backend-realtime-hooks.md](./phase-05-backend-realtime-hooks.md) | WebSocket, Claude hooks | Pending |
 | 06 | [phase-06-integration-testing.md](./phase-06-integration-testing.md) | E2E, unit tests | Pending |
 

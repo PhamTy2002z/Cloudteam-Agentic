@@ -1,7 +1,7 @@
 # System Architecture - AI Toolkit Sync Platform
 
 **Last Updated:** 2026-01-03
-**Phase:** Phase 01 Complete
+**Phase:** Phase 03 Complete (Frontend Foundation)
 **Architecture Style:** Monolithic (Backend + Frontend) with Monorepo Structure
 
 ---
@@ -79,41 +79,87 @@ AI Toolkit Sync Platform uses a modern full-stack TypeScript architecture with c
 ```
 apps/frontend/
 ├── app/                    # App Router (file-based routing)
-│   ├── (auth)/             # Route groups (shared layout)
-│   │   ├── login/
-│   │   └── layout.tsx
-│   ├── dashboard/
-│   │   ├── page.tsx        # /dashboard route
-│   │   └── [id]/           # Dynamic route /dashboard/:id
-│   ├── layout.tsx          # Root layout (global UI)
-│   ├── page.tsx            # Home page
-│   └── globals.css         # Global styles (Tailwind)
+│   ├── (dashboard)/        # Route group for authenticated pages
+│   │   ├── layout.tsx      # Dashboard layout with sidebar
+│   │   ├── projects/       # Projects management
+│   │   │   ├── page.tsx    # Projects list view
+│   │   │   ├── loading.tsx # Loading skeleton
+│   │   │   ├── [id]/       # Dynamic project routes
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── settings/page.tsx
+│   │   │   └── create-project-dialog.tsx
+│   │   └── editor/         # Monaco editor for docs
+│   │       └── [projectId]/[docId]/page.tsx
+│   ├── layout.tsx          # Root layout (global UI, Providers)
+│   ├── page.tsx            # Home page (redirect to /projects)
+│   └── globals.css         # Global styles (Tailwind, CSS variables)
 ├── components/
-│   ├── ui/                 # Reusable UI components (Button, Input)
-│   └── features/           # Feature-specific components (ProjectCard)
+│   ├── ui/                 # Shadcn UI components (Button, Card, Input, Label, Badge, Skeleton, Dialog)
+│   ├── header.tsx          # Navigation bar with branding
+│   ├── sidebar.tsx         # Dashboard navigation
+│   ├── project-card.tsx    # Project display component
+│   ├── create-project-dialog.tsx  # New project modal
+│   ├── monaco-editor.tsx   # Code/markdown editor wrapper
+│   ├── markdown-preview.tsx # Markdown renderer
+│   ├── file-tree.tsx       # Hierarchical file browser
+│   ├── lock-status.tsx     # Project lock indicator
+│   └── lock-banner.tsx     # Lock alert banner
+├── hooks/                  # Custom React hooks
+│   ├── useProjects.ts      # Projects data fetching
+│   ├── useDocs.ts          # Docs data fetching
+│   ├── useLocks.ts         # Lock state management
+│   └── useTheme.ts         # Theme switching
 ├── lib/
-│   ├── api.ts              # TanStack Query hooks
-│   └── utils.ts            # Shared utilities
+│   ├── api.ts              # TanStack Query hooks & API client
+│   ├── query-client.ts     # QueryClient factory
+│   ├── providers.tsx       # Provider wrapper component
+│   └── utils.ts            # Shared utilities (cn, formatRelativeTime, debounce)
 ├── stores/                 # Zustand state stores
-│   └── projectStore.ts
-└── types/                  # TypeScript type definitions
+│   └── ui-store.ts         # Theme & UI state (dark mode toggle)
+├── types/                  # TypeScript type definitions
+│   └── index.ts            # Shared types (Project, Doc, Lock, ApiKey)
+├── next.config.js          # API rewrites to backend (3001)
+├── tailwind.config.ts      # Tailwind CSS config with Shadcn variables
+├── postcss.config.js       # PostCSS with Tailwind & autoprefixer
+├── components.json         # Shadcn UI configuration
+└── tsconfig.json           # TypeScript configuration
 ```
 
 #### Key Technologies
 - **Routing:** App Router (file-based, server components by default)
 - **State Management:** Zustand (client state) + TanStack Query (server state)
-- **Styling:** Tailwind CSS + CSS Modules
+- **Styling:** Tailwind CSS + CSS Modules + CSS Variables
 - **Code Editor:** Monaco Editor (VS Code engine)
-- **Real-time:** WebSocket client (socket.io-client)
+- **Real-time:** WebSocket client (socket.io-client, planned Phase 05)
+- **UI Components:** Shadcn/ui (7 components: Button, Card, Input, Label, Badge, Skeleton, Dialog)
+- **Data Fetching:** TanStack React Query 5.28.0 with React Query DevTools
 
 #### Data Flow
 1. User interaction triggers event (button click, form submit)
-2. Component calls TanStack Query mutation/query
-3. API client sends HTTPS request to backend
+2. Component calls TanStack Query mutation/query hook
+3. API client sends HTTPS request to backend (via next.config.js rewrite)
 4. Backend processes request, returns JSON response
-5. TanStack Query updates cache
-6. Zustand store updates (if needed for global state)
+5. TanStack Query updates cache & invalidates related queries
+6. Zustand store updates (if needed for global UI state)
 7. React re-renders affected components
+8. React Query DevTools available for debugging (dev mode)
+
+#### Component Hierarchy
+```
+RootLayout (Providers wrapper)
+├── QueryClientProvider (TanStack Query)
+├── Zustand Store (UI state)
+└── Children
+    ├── DashboardLayout (sidebar, header)
+    │   ├── Sidebar (navigation)
+    │   ├── Header (branding, theme toggle)
+    │   └── Main Content
+    │       ├── ProjectsList (ProjectCard components)
+    │       ├── ProjectDetail (with LockBanner, LockStatus)
+    │       ├── ProjectSettings
+    │       └── MonacoEditor (with FileTree, MarkdownPreview)
+    └── Home (redirect)
+```
 
 ---
 
