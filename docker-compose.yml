@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aitoolkit-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aitoolkit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aitoolkit_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-aitoolkit}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aitoolkit}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

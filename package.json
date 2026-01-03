@@ -1,0 +1,25 @@
+{
+  "name": "ai-toolkit-sync-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Centralized docs management for AI-assisted development teams",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:backend": "pnpm --filter backend run dev",
+    "dev:frontend": "pnpm --filter frontend run dev",
+    "build": "pnpm -r run build",
+    "build:backend": "pnpm --filter backend run build",
+    "build:frontend": "pnpm --filter frontend run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "db:migrate": "pnpm --filter backend prisma migrate dev",
+    "db:generate": "pnpm --filter backend prisma generate",
+    "db:studio": "pnpm --filter backend prisma studio"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

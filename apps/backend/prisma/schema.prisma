@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  repoUrl   String
+  token     String   // Encrypted GitHub PAT
+  branch    String   @default("main")
+  docsPath  String   @default("docs")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  docs    Doc[]
+  locks   Lock[]
+  apiKeys ApiKey[]
+}
+
+model Doc {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fileName  String
+  content   String   @db.Text
+  hash      String
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, fileName])
+  @@index([projectId])
+}
+
+model Lock {
+  id        String    @id @default(cuid())
+  projectId String    @unique
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  lockedBy  String
+  lockedAt  DateTime  @default(now())
+  expiresAt DateTime?
+  reason    String?
+
+  @@index([projectId])
+  @@index([expiresAt])
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  key       String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([key])
+}
