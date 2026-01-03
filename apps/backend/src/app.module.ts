@@ -7,6 +7,8 @@ import { ProjectsModule } from './projects/projects.module';
 import { DocsModule } from './docs/docs.module';
 import { LockModule } from './lock/lock.module';
 import { GitHubModule } from './github/github.module';
+import { WebSocketModule } from './websocket/websocket.module';
+import { HookModule } from './hook/hook.module';
 
 @Module({
   imports: [
@@ -19,10 +21,12 @@ import { GitHubModule } from './github/github.module';
     ]),
     PrismaModule,
     CryptoModule,
+    WebSocketModule,
     ProjectsModule,
     DocsModule,
     LockModule,
     GitHubModule,
+    HookModule,
   ],
 })
 export class AppModule {}

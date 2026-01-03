@@ -14,7 +14,9 @@
     "test": "pnpm -r run test",
     "db:migrate": "pnpm --filter backend prisma migrate dev",
     "db:generate": "pnpm --filter backend prisma generate",
-    "db:studio": "pnpm --filter backend prisma studio"
+    "db:studio": "pnpm --filter backend prisma studio",
+    "hooks:install": "chmod +x scripts/*.sh && echo 'Hooks ready. Copy to ~/.claude/hooks/'",
+    "hooks:check": "./scripts/check-platform.sh"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
