@@ -99,7 +99,7 @@ export default function ProjectPage({
             <Button
               onClick={handleSync}
               disabled={syncDocs.isPending}
-              className="bg-brand-cyan hover:bg-brand-cyan/90 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${syncDocs.isPending ? 'animate-spin' : ''}`} />
               {syncDocs.isPending ? 'Syncing...' : 'Sync from GitHub'}
@@ -107,17 +107,17 @@ export default function ProjectPage({
           </div>
 
           {hasDocs ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {docs.map((doc) => (
                 <Link
                   key={doc.id}
                   href={`/editor/${params.id}/${encodeURIComponent(doc.fileName)}`}
                   className={lock ? 'pointer-events-none opacity-50' : ''}
                 >
-                  <Card className="p-4 hover:border-brand-cyan/50 transition cursor-pointer">
+                  <Card className="p-6 hover:border-primary/50 transition cursor-pointer rounded-lg">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-brand-cyan/20 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-brand-cyan" />
+                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-primary" />
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-foreground truncate">{doc.fileName}</p>
@@ -138,7 +138,7 @@ export default function ProjectPage({
               <Button
                 onClick={handleSync}
                 disabled={syncDocs.isPending}
-                className="bg-brand-cyan hover:bg-brand-cyan/90 text-white"
+                className="bg-primary hover:bg-primary/90 text-white"
               >
                 <RefreshCw className={`w-4 h-4 mr-2 ${syncDocs.isPending ? 'animate-spin' : ''}`} />
                 {syncDocs.isPending ? 'Syncing...' : 'Sync from GitHub'}

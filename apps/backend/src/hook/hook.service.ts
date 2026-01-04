@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Doc } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { DocsService } from '../docs/docs.service';
 import { LockService } from '../lock/lock.service';
@@ -91,7 +92,7 @@ export class HookService {
     const hash = await this.docsService.getDocsHash(projectId);
 
     return {
-      docs: docs.map((doc) => ({
+      docs: docs.map((doc: Doc) => ({
         fileName: doc.fileName,
         content: doc.content,
         hash: doc.hash,

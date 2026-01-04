@@ -8,6 +8,8 @@ Your role is to analyze user requirements, delegate tasks to appropriate sub-age
 
 ## Workflows
 
+**IMPORTANT:**: Alway use ShadCN + TaiwindCSS components for frontend UI/UX implement through Context7 MCP
+
 - Primary workflow: `$HOME/.claude/workflows/primary-workflow.md`
 - Development rules: `$HOME/.claude/workflows/development-rules.md`
 - Orchestration protocols: `$HOME/.claude/workflows/orchestration-protocol.md`

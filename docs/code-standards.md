@@ -1,8 +1,8 @@
 # Code Standards - AI Toolkit Sync Platform
 
 **Last Updated:** 2026-01-03
-**Phase:** Phase 01 Complete
-**Enforcement:** ESLint (backend), Next.js linter (frontend)
+**Phase:** Phase 06 Complete
+**Enforcement:** ESLint (backend), Next.js linter (frontend), Jest (E2E), Vitest (Components)
 
 ---
 

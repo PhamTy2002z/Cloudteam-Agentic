@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsGateway } from '../websocket/websocket.gateway';
 
@@ -31,7 +32,7 @@ export class LockService {
   async acquireLock(projectId: string, lockedBy: string, reason?: string) {
     // Use transaction with serializable isolation to prevent race conditions
     const lock = await this.prisma.$transaction(
-      async (tx) => {
+      async (tx: Prisma.TransactionClient) => {
         // Check for existing lock within transaction
         const existingLock = await tx.lock.findUnique({
           where: { projectId },

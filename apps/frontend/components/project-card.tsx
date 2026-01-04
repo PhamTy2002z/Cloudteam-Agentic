@@ -22,7 +22,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Link href={`/projects/${project.id}`} className="block">
-      <Card className="p-5 hover:border-primary/50 transition group cursor-pointer bg-card">
+      <Card className="p-6 hover:border-primary/50 transition group cursor-pointer bg-card rounded-lg">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0">

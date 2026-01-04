@@ -45,13 +45,13 @@ export default function ProjectsPage() {
       {/* Projects grid */}
       <div className="p-6">
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[200px] rounded-xl" />
+              <Skeleton key={i} className="h-[200px] rounded-lg" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects?.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
@@ -59,10 +59,10 @@ export default function ProjectsPage() {
             {/* Add new project card */}
             <button
               onClick={() => setCreateDialogOpen(true)}
-              className="bg-card/50 border-2 border-dashed border-border rounded-xl p-5 flex flex-col items-center justify-center text-center min-h-[200px] hover:border-brand-cyan/50 hover:bg-card transition cursor-pointer group"
+              className="bg-card/50 border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center text-center min-h-[200px] hover:border-primary/50 hover:bg-card transition cursor-pointer group"
             >
-              <div className="w-12 h-12 rounded-full bg-secondary group-hover:bg-brand-cyan/20 flex items-center justify-center mb-3 transition">
-                <Plus className="w-6 h-6 text-muted-foreground group-hover:text-brand-cyan transition" />
+              <div className="w-12 h-12 rounded-full bg-secondary group-hover:bg-primary/20 flex items-center justify-center mb-3 transition">
+                <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition" />
               </div>
               <h3 className="font-medium text-muted-foreground group-hover:text-foreground transition">
                 Add New Project

@@ -94,8 +94,13 @@ Based on 4px base unit (Tailwind scale):
 | `3` | `p-3` | 12px | Menu item padding |
 | `4` | `p-4` | 16px | Card padding, header padding |
 | `5` | `p-5` | 20px | Section padding |
-| `6` | `p-6` | 24px | Large gaps, card content |
+| `6` | `p-6` | 24px | **Standard card content**, large gaps |
 | `8` | `p-8` | 32px | Page margins |
+
+### Component Spacing Standards (Phase 02)
+- **Cards**: `p-6` (24px) padding, `rounded-lg` (8px) radius
+- **Grid gaps**: `gap-6` (24px) between cards
+- **Project cards**: `p-6` with `rounded-lg` borders
 
 ---
 
@@ -104,7 +109,7 @@ Based on 4px base unit (Tailwind scale):
 | Token | Value | Usage |
 |-------|-------|-------|
 | `--radius` | `0.5rem` (8px) | Default (cards, modals) |
-| `rounded-lg` | `8px` | Cards, containers |
+| `rounded-lg` | `8px` | **Standard cards**, containers (normalized in Phase 02) |
 | `rounded-md` | `6px` | Buttons, inputs |
 | `rounded-sm` | `4px` | Badges, small elements |
 | `rounded-full` | `9999px` | Avatars, pills |
@@ -354,4 +359,4 @@ apps/frontend/
 
 ---
 
-*Last updated: 2026-01-04 (Sidebar design system refactor with shadcn/ui)*
+*Last updated: 2026-01-04 (Phase 02: Spacing normalization - p-6/gap-6/rounded-lg standard)*

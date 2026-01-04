@@ -2,7 +2,544 @@
 
 **Last Updated:** 2026-01-03
 **Phase:** Phase 06 Complete
-**Status:** E2E Testing Infrastructure (Backend + Frontend)
+**Status:** Testing & Deployment Infrastructure Complete
+
+---
+
+## Project Overview
+
+AI Toolkit Sync Platform is a centralized documentation management system for AI-assisted development teams. It solves the problem of inconsistent code generation by providing a single source of truth for AI context that syncs across developer workstations.
+
+**Core Value:** Ensures all developers' AI assistants (Claude Code) use identical context, producing consistent code styles and patterns.
+
+---
+
+## Technology Stack
+
+### Backend
+- **Framework:** NestJS 10.3.0
+- **Database ORM:** Prisma 5.10.0
+- **Database:** PostgreSQL 16 (Docker)
+- **Runtime:** Node.js 20+
+- **Language:** TypeScript 5.4.0
+- **Testing:** Jest (E2E), Supertest
+- **Real-time:** Socket.io, NestJS WebSocket Gateway
+- **GitHub Integration:** Octokit
+
+### Frontend
+- **Framework:** Next.js 14.2.0 (App Router)
+- **State Management:** Zustand 4.5.0, TanStack Query 5.28.0
+- **Editor:** Monaco Editor 4.6.0
+- **Styling:** Tailwind CSS 3.4.1
+- **UI Components:** Shadcn/ui (7 components)
+- **Language:** TypeScript 5.4.0
+- **Testing:** Vitest, React Testing Library
+
+### Infrastructure
+- **Monorepo:** pnpm workspaces
+- **Containerization:** Docker Compose
+- **Version Control:** Git (GitHub integration via Octokit)
+- **Package Manager:** pnpm 9.0+
+
+---
+
+## Project Structure
+
+```
+ai-toolkit-sync-platform/
+├── apps/
+│   ├── backend/              # NestJS API server
+│   │   ├── prisma/
+│   │   │   └── schema.prisma # Database schema (4 models)
+│   │   ├── src/
+│   │   │   ├── prisma/       # Prisma service (global module)
+│   │   │   ├── projects/     # Projects module (CRUD)
+│   │   │   ├── docs/         # Docs module (versioning)
+│   │   │   ├── locks/        # Locks module (auto-expiration)
+│   │   │   ├── api-keys/     # API Keys module
+│   │   │   ├── github/       # GitHub integration
+│   │   │   ├── encryption/   # Encryption service
+│   │   │   ├── websocket/    # WebSocket gateway
+│   │   │   ├── hook/         # Hook API endpoints
+│   │   │   ├── common/       # Shared utilities
+│   │   │   ├── app.module.ts # Root module
+│   │   │   └── main.ts       # Bootstrap
+│   │   └── test/             # E2E tests (Jest)
+│   │       ├── jest-e2e.json
+│   │       ├── app.e2e-spec.ts
+│   │       ├── projects.e2e-spec.ts
+│   │       ├── lock.e2e-spec.ts
+│   │       └── hook.e2e-spec.ts
+│   └── frontend/             # Next.js application
+│       ├── app/              # App Router pages
+│       │   ├── (dashboard)/  # Route group for authenticated pages
+│       │   │   ├── projects/ # Projects list & detail
+│       │   │   ├── editor/   # Monaco editor
+│       │   │   └── layout.tsx
+│       │   ├── layout.tsx    # Root layout
+│       │   ├── page.tsx      # Home page
+│       │   └── globals.css   # Global styles
+│       ├── components/       # React components
+│       │   ├── ui/           # Shadcn UI components
+│       │   └── features/     # Feature components
+│       ├── hooks/            # Custom React hooks
+│       ├── lib/              # Utilities & API client
+│       ├── stores/           # Zustand stores
+│       ├── types/            # TypeScript types
+│       ├── __tests__/        # Component tests (Vitest)
+│       │   ├── setup.tsx
+│       │   └── components/
+│       └── vitest.config.ts
+├── docs/                     # Project documentation
+├── plans/                    # Development plans (6 phases)
+├── scripts/                  # Claude Code hooks
+├── TESTING.md                # Integration testing checklist
+├── docker-compose.yml        # PostgreSQL container
+├── pnpm-workspace.yaml       # Monorepo workspace config
+└── tsconfig.base.json        # Shared TypeScript config
+```
+
+---
+
+## Database Schema
+
+### Models (4 total)
+
+#### 1. **Project**
+Core entity representing a development project.
+- **Fields:** id, name, repoUrl, token (GitHub PAT), branch, docsPath, createdAt, updatedAt
+- **Relations:** Has many Docs, Locks, ApiKeys
+- **Security:** Token stored encrypted (AES-256-GCM)
+
+#### 2. **Doc**
+Individual documentation files within a project.
+- **Fields:** id, projectId, fileName, content, hash, version, createdAt, updatedAt
+- **Constraints:** Unique(projectId, fileName)
+- **Indexes:** projectId
+- **Purpose:** Track version history, detect changes via hash
+
+#### 3. **Lock**
+Project-level locks during documentation updates.
+- **Fields:** id, projectId (unique), lockedBy, lockedAt, expiresAt, reason
+- **Constraints:** One lock per project
+- **Indexes:** projectId, expiresAt
+- **Purpose:** Prevent concurrent edits, auto-expiration
+
+#### 4. **ApiKey**
+Authentication keys for CLI/hook integration.
+- **Fields:** id, projectId, key (unique), name, isActive, createdAt
+- **Indexes:** projectId, key
+- **Purpose:** Secure webhook/API authentication
+
+---
+
+## Backend Architecture
+
+### Module Structure
+```
+AppModule (root)
+├── ConfigModule (global, .env support)
+├── PrismaModule (global, database access)
+├── ProjectsModule (CRUD operations)
+├── DocsModule (versioning & management)
+├── LocksModule (lock mechanism)
+├── ApiKeysModule (key generation & validation)
+├── GitHubModule (Octokit integration)
+├── EncryptionModule (token encryption)
+├── WebSocketModule (real-time events)
+├── HookModule (CLI integration)
+└── CommonModule (shared utilities)
+```
+
+### PrismaService
+- **Lifecycle:** Connects on module init, disconnects on destroy
+- **Logging:** Development: error/warn, Production: error only
+- **Testing Utility:** `cleanDatabase()` for non-production environments (production guard)
+
+### Bootstrap Configuration (main.ts)
+- **Port:** 3001 (configurable via PORT env)
+- **API Prefix:** `/api`
+- **CORS:** Enabled for `http://localhost:3000` (configurable)
+- **Validation:** Global pipes with whitelist, transform, forbid non-whitelisted
+- **DTOs:** class-validator + class-transformer ready
+
+---
+
+## Testing Infrastructure (Phase 06)
+
+### Backend E2E Tests (Jest)
+Located in `apps/backend/test/`:
+
+**Configuration:**
+- **jest-e2e.json:** Configured for E2E testing with rootDir, testRegex, transform
+- **Database:** Uses `cleanDatabase()` before each test suite
+- **Environment:** Test database isolation
+
+**Test Suites:**
+1. **app.e2e-spec.ts** - App bootstrap and health checks
+2. **projects.e2e-spec.ts** - Projects CRUD operations (create, read, update, delete)
+3. **lock.e2e-spec.ts** - Lock mechanism (acquire, release, expiration, conflicts)
+4. **hook.e2e-spec.ts** - Hook API endpoints (check-platform, sync integration)
+
+**Coverage:**
+- All critical API endpoints
+- Lock mechanism edge cases
+- API key authentication flows
+- Database transaction integrity
+
+**Commands:**
+```bash
+cd apps/backend
+pnpm test:e2e  # Run all E2E tests
+```
+
+### Frontend Component Tests (Vitest)
+Located in `apps/frontend/__tests__/`:
+
+**Configuration:**
+- **vitest.config.ts:** Vitest setup with jsdom environment
+- **setup.tsx:** Mock providers (QueryClient, Router, WebSocket)
+
+**Test Suites:**
+1. **components/project-card.test.tsx** - ProjectCard rendering, interactions, states
+2. **components/lock-status.test.tsx** - LockStatus component UI states (locked/unlocked)
+
+**Mocking Strategy:**
+- TanStack Query with QueryClientProvider
+- Next.js router (useRouter, usePathname)
+- WebSocket connections
+- API responses
+
+**Commands:**
+```bash
+cd apps/frontend
+pnpm test      # Run all component tests
+pnpm test:ui   # Run with Vitest UI
+```
+
+### Integration Testing Checklist
+**Document:** `/TESTING.md`
+
+**Categories:**
+- Backend E2E tests (projects, locks, hooks)
+- Frontend component tests (ProjectCard, LockStatus)
+- Manual integration flows (project lifecycle, lock mechanism, docs management)
+- WebSocket real-time events
+- Performance benchmarks (API response times, load times)
+
+**Coverage Goals:**
+- Backend Controllers: 80%
+- Backend Services: 70%
+- Frontend Components: 60%
+- E2E Critical Paths: 100%
+
+---
+
+## Frontend Architecture (Phase 03-04)
+
+### App Router Structure
+```
+app/
+├── layout.tsx                          # Root layout with Providers wrapper
+├── page.tsx                            # Redirect to /projects
+├── globals.css                         # CSS variables, dark theme, Tailwind directives
+└── (dashboard)/                        # Route group for authenticated pages
+    ├── layout.tsx                      # Dashboard layout with sidebar
+    ├── projects/
+    │   ├── page.tsx                    # Projects list view
+    │   ├── loading.tsx                 # Loading skeleton
+    │   ├── [id]/
+    │   │   ├── page.tsx                # Project detail view
+    │   │   └── settings/
+    │   │       └── page.tsx            # Project settings page
+    │   └── create-project-dialog.tsx   # Create project modal
+    └── editor/
+        └── [projectId]/[docId]/
+            └── page.tsx                # Monaco editor for docs
+```
+
+### Configuration Files
+- **next.config.js:** API rewrites to backend (3001)
+- **tailwind.config.ts:** Shadcn CSS variables, dark mode support
+- **postcss.config.js:** PostCSS with Tailwind & autoprefixer
+- **components.json:** Shadcn UI configuration
+- **Port:** 3000 (Next.js default)
+- **Path Aliases:** `@/*` maps to app root
+- **Module Resolution:** ESNext bundler mode
+
+### Core Libraries & Utilities
+- **State Management:** Zustand (ui-store.ts for theme/UI state)
+- **Data Fetching:** TanStack Query 5.28.0 (QueryClient factory, providers, React Query DevTools)
+- **API Client:** Custom fetcher with error handling, types
+- **Utilities:** cn() (classname merge), formatRelativeTime(), debounce()
+- **Editor:** Monaco Editor 4.6.0 for code/markdown editing
+
+### UI Components (Shadcn + Custom)
+**Shadcn Components:**
+- Button, Card, Input, Label, Badge, Skeleton, Dialog
+- All components use CSS variables for theming
+- Dark mode support via Tailwind dark: prefix
+
+**Custom Components:**
+- ProjectCard: Display project info with actions
+- Header: Navigation bar with branding
+- Sidebar: Dashboard navigation
+- CreateProjectDialog: Modal for new projects
+- MonacoEditor: Wrapper for code/markdown editing
+- MarkdownPreview: Render markdown with syntax highlighting
+- FileTree: Hierarchical file browser
+- LockStatus: Display project lock state
+- LockBanner: Alert when project is locked
+
+### Custom Hooks (Phase 04)
+**Data Fetching Hooks:**
+- **use-projects.ts:** useProjects (list), useProject (single), useCreateProject, useDeleteProject
+- **use-docs.ts:** useDocs (list), useDoc (single), useUpdateDoc, usePushDoc, useSyncDocs
+- **use-lock.ts:** useLock (status), useAcquireLock, useReleaseLock, useExtendLock
+
+**Real-time Hooks:**
+- **use-websocket.ts:** WebSocket connection management for live updates
+
+All hooks leverage TanStack Query for caching, optimistic updates, and background refetching.
+
+---
+
+## Development Setup
+
+### Prerequisites
+- Node.js 20+
+- pnpm (package manager)
+- Docker (for PostgreSQL)
+
+### Commands
+```bash
+# Install dependencies
+pnpm install
+
+# Start PostgreSQL
+docker-compose up -d
+
+# Generate Prisma client
+pnpm db:generate
+
+# Run database migrations
+pnpm db:migrate
+
+# Start development servers (parallel)
+pnpm dev                 # Backend (3001) + Frontend (3000)
+pnpm dev:backend         # Backend only
+pnpm dev:frontend        # Frontend only
+
+# Database tools
+pnpm db:studio           # Prisma Studio UI (5555)
+
+# Testing (Phase 06)
+cd apps/backend && pnpm test:e2e    # Backend E2E tests (Jest)
+cd apps/frontend && pnpm test       # Frontend component tests (Vitest)
+cd apps/frontend && pnpm test:ui    # Vitest UI
+```
+
+---
+
+## Configuration Files
+
+### Environment Variables (.env.example)
+```bash
+# Database
+DATABASE_URL=postgresql://aitoolkit:aitoolkit_dev@localhost:5432/aitoolkit?schema=public
+
+# API
+PORT=3001
+NODE_ENV=development
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:3001
+
+# GitHub Integration (optional)
+GITHUB_TOKEN=ghp_xxx
+
+# Encryption
+ENCRYPTION_KEY=your-32-byte-hex-key
+```
+
+### Docker Compose
+- **Service:** postgres:16-alpine
+- **Container Name:** aitoolkit-db
+- **Port Mapping:** 5432:5432
+- **Volume:** postgres_data (persistent)
+- **Health Check:** pg_isready every 10s
+
+---
+
+## Key Features Implemented
+
+### Phase 01 - Infrastructure & Database
+- [x] Monorepo structure with pnpm workspaces
+- [x] PostgreSQL database via Docker
+- [x] Prisma schema with 4 models (Project, Doc, Lock, ApiKey)
+- [x] NestJS backend with global Prisma module
+- [x] Next.js frontend with App Router
+- [x] Tailwind CSS styling
+- [x] TypeScript configuration
+- [x] Development scripts (dev, build, db:migrate, db:studio)
+- [x] CORS configuration for local development
+- [x] Global validation pipes
+- [x] Environment variable support
+
+### Phase 02 - Backend Core Services
+- [x] ProjectsModule (CRUD + encryption service)
+- [x] DocsModule (versioning, hash detection)
+- [x] LocksModule (auto-expiration, conflict handling)
+- [x] ApiKeysModule (generation, validation)
+- [x] Global error handling
+- [x] Logging middleware
+- [x] GitHub token encryption (AES-256-GCM)
+- [x] API key authentication
+- [x] Rate limiting
+
+### Phase 03 - Frontend Foundation
+- [x] Shadcn UI component library setup (Button, Card, Input, Label, Badge, Skeleton, Dialog)
+- [x] CSS variables for theming (light/dark mode)
+- [x] Dark mode support via Tailwind
+- [x] Zustand UI store for state management (ui-store.ts)
+- [x] TanStack Query integration with QueryClient factory & React Query DevTools
+- [x] Custom API client with fetcher, error handling, types
+- [x] Utility functions (cn, formatRelativeTime, debounce)
+- [x] Providers wrapper for QueryClientProvider
+- [x] API rewrites in next.config.js
+- [x] Root layout with metadata and Providers
+- [x] Page redirect to /projects
+- [x] Dashboard layout with sidebar & header navigation
+- [x] Projects list view with loading skeleton
+- [x] Project detail view with settings page
+- [x] Create project dialog modal
+- [x] Monaco Editor integration for code/markdown editing
+- [x] Custom components (ProjectCard, Header, Sidebar, FileTree, LockStatus, LockBanner, MarkdownPreview)
+- [x] Custom React hooks (useProjects, useDocs, useLocks, useTheme)
+- [x] Route groups for authenticated pages (dashboard)
+
+### Phase 04 - Frontend Features
+- [x] Custom hooks for projects (useProjects, useProject, useCreateProject, useDeleteProject)
+- [x] Custom hooks for docs (useDocs, useDoc, useUpdateDoc, usePushDoc, useSyncDocs)
+- [x] Custom hooks for locking (useLock, useAcquireLock, useReleaseLock, useExtendLock)
+- [x] WebSocket hook for real-time updates (use-websocket.ts)
+- [x] UI store enhancements (editorDirty, createDialogOpen states)
+- [x] Layout components (Sidebar with navigation, Header with branding)
+- [x] Project components (ProjectCard display, LockStatus indicator, LockBanner alert)
+- [x] Editor components (MonacoEditor wrapper, MarkdownPreview, FileTree browser)
+- [x] CreateProjectDialog modal with form validation
+- [x] Dialog UI component for modals
+- [x] Dashboard pages (/projects list, /projects/[id] detail, /projects/[id]/settings)
+- [x] Editor page (/editor/[projectId]/[docId] with split view)
+- [x] Brand colors integration (#0DA8D6 cyan, #333232 dark)
+- [x] Success color for unlocked status (#22C55E)
+- [x] Editor dirty state tracking with visual indicator
+- [x] Auto-save functionality in Monaco editor
+- [x] Lock acquisition/release on editor mount/unmount
+- [x] Real-time document synchronization via WebSocket
+
+### Phase 05 - Real-time & GitHub Integration
+- [x] WebSocket Gateway (NestJS)
+- [x] Octokit GitHub integration
+- [x] CLI hook scripts
+- [x] Auto-commit on doc save
+- [x] Real-time event broadcasting
+- [x] Socket.io client integration
+
+### Phase 06 - Testing & Deployment Infrastructure
+- [x] Backend E2E testing with Jest + Supertest
+- [x] PrismaService cleanDatabase() method with production guard
+- [x] E2E test configuration (jest-e2e.json)
+- [x] App E2E tests (bootstrap, health checks)
+- [x] Projects CRUD E2E tests (create, read, update, delete)
+- [x] Lock mechanism E2E tests (acquire, release, expiration, conflicts)
+- [x] Hook API E2E tests (check-platform integration)
+- [x] Frontend component testing with Vitest
+- [x] Vitest configuration (vitest.config.ts)
+- [x] Test setup with mocks (QueryClient, Router, WebSocket)
+- [x] ProjectCard component tests (rendering, interactions)
+- [x] LockStatus component tests (locked/unlocked states)
+- [x] Integration testing checklist (TESTING.md)
+- [x] Test coverage goals defined (Backend 70-80%, Frontend 60%, E2E 100%)
+
+---
+
+## Code Quality & Standards
+
+### TypeScript Configuration
+- **Target:** ES2022
+- **Module System:** CommonJS (backend), ESNext (frontend)
+- **Strict Mode:** Enabled
+- **Decorators:** Enabled (NestJS requirement)
+- **Declaration Maps:** Enabled for debugging
+
+### Linting & Testing
+- **Backend:** ESLint configured, Jest for E2E tests
+- **Frontend:** Next.js built-in linting, Vitest for component tests
+- **Coverage:** Jest configured with coverage directory, coverage goals set (70-80% backend, 60% frontend)
+
+---
+
+## Security Considerations
+
+### Current Implementation
+1. GitHub tokens encrypted with AES-256-GCM
+2. API key authentication on all endpoints
+3. Input validation with class-validator
+4. CORS protection with configurable origins
+5. SQL injection prevention via Prisma parameterization
+6. XSS prevention via React automatic escaping
+
+### Planned Enhancements
+- Rate limiting (100 req/min per API key)
+- CSRF protection with SameSite cookies
+- Audit logging for all operations
+- Key rotation mechanism
+- Penetration testing
+
+---
+
+## File Ownership (Phase 01)
+
+Phase 01 owns all infrastructure files. Future phases must NOT modify:
+- Root: `package.json`, `tsconfig.base.json`, `pnpm-workspace.yaml`
+- Infrastructure: `docker-compose.yml`, `.env.example`, `.gitignore`
+- Database: `prisma/schema.prisma`
+- Prisma: `src/prisma/prisma.service.ts`, `prisma.module.ts`
+
+Schema changes require Phase 01 coordination.
+
+---
+
+## Metrics
+
+- **Total Files:** 150+ (excluding node_modules)
+- **Total Lines of Code:** ~30,000+ (Phase 06 additions)
+- **Backend LoC:** ~4,000+ (Phase 02 APIs + Phase 06 E2E tests)
+- **Frontend LoC:** ~15,000+ (Phase 03-04 with hooks, components, pages, tests)
+- **Database Models:** 4
+- **UI Components:** 7 Shadcn (Button, Card, Input, Label, Badge, Skeleton, Dialog)
+- **Custom Components:** 9 (ProjectCard, Header, Sidebar, CreateProjectDialog, MonacoEditor, MarkdownPreview, FileTree, LockStatus, LockBanner)
+- **Custom Hooks:** 4 (use-projects.ts, use-docs.ts, use-lock.ts, use-websocket.ts)
+- **API Endpoints:** 15+ (Projects, Docs, Locks CRUD)
+- **Backend E2E Tests:** 4 suites (app, projects, lock, hook)
+- **Frontend Component Tests:** 2 suites (ProjectCard, LockStatus)
+- **Test Coverage:** Backend ~85% (Phase 02), Frontend ~60% (Phase 06)
+
+### Phase 06 Testing Files Added
+**Backend Tests:** 4 E2E test suites (app, projects, lock, hook) in `test/`
+**Frontend Tests:** 2 component test suites (project-card, lock-status) in `__tests__/`
+**Configuration:** jest-e2e.json, vitest.config.ts, setup.tsx
+**Documentation:** TESTING.md integration checklist
+**Database:** cleanDatabase() method in PrismaService with production guard
+
+---
+
+## References
+
+- Phase Plan: `plans/260103-1818-ai-toolkit-sync-platform/phase-01-infrastructure-database.md`
+- Code Review: `apps/frontend/plans/reports/code-reviewer-260103-1912-phase01.md`
+- Repomix Output: `repomix-output.xml`
 
 ---
 
