@@ -1,49 +1,59 @@
 # AI Toolkit Sync Platform - Design Guidelines
 
 ## Overview
-Design system for a developer-focused docs synchronization platform. Emphasizes clarity, efficiency, and professional aesthetics with dark mode as primary theme.
+Design system for a developer-focused documentation synchronization platform. Features a warm dark theme with coral/orange accents, prioritizing clarity, efficiency, and professional aesthetics.
+
+---
+
+## Design Philosophy
+
+- **Warm Dark Theme**: Reduces eye strain with warm undertones (#1A1917 base)
+- **Coral Accent**: Distinguishes from typical blue-heavy dev tools (#D97755)
+- **Token-based System**: HSL CSS variables for consistency and theming
+- **Shadcn/ui Pattern**: Leverages proven component architecture
+- **Accessibility First**: WCAG AA compliant, keyboard navigable
 
 ---
 
 ## Color Palette
 
-### Brand Colors (Phase 04)
-| Token | Hex | Usage |
-|-------|-----|-------|
-| `--brand-cyan` | `#0DA8D6` | Primary brand accent, CTAs |
-| `--brand-dark` | `#333232` | Main dark background |
-| `--brand-dark-lighter` | `#3D3C3C` | Elevated surfaces |
-| `--brand-dark-darker` | `#1A1A1A` | Deepest backgrounds |
+### Brand Colors
+| Token | HSL | Hex | Usage |
+|-------|-----|-----|-------|
+| `--primary` | `191 89% 45%` | `#0DA8D6` | Primary CTAs, links, focus rings |
+| `--sidebar-primary` | `18 65% 59%` | `#D97755` | Sidebar accent, active states |
+| `--success` | `142 71% 45%` | `#22C55E` | Success states, unlocked |
+| `--destructive` | `0 62% 30%` | `#7F1D1D` | Error states, locked |
+| `--warning` | `38 92% 50%` | `#F59E0B` | Non-critical alerts, pending states |
+| `--info` | `217 91% 60%` | `#60A5FA` | Informational messages, tips |
 
 ### Dark Theme (Primary)
-| Token | Hex/HSL | Usage |
-|-------|---------|-------|
-| `--background` | `hsl(0 0% 10%)` | Main background |
-| `--foreground` | `hsl(0 0% 95%)` | Primary text |
-| `--card` | `hsl(0 0% 13%)` | Cards, panels |
-| `--card-foreground` | `hsl(0 0% 95%)` | Card text |
-| `--border` | `hsl(0 0% 22%)` | Borders, dividers |
-| `--muted` | `hsl(0 0% 18%)` | Muted backgrounds |
-| `--muted-foreground` | `hsl(0 0% 60%)` | Muted text, placeholders |
+| Token | HSL | Hex | Usage |
+|-------|-----|-----|-------|
+| `--background` | `0 0% 10%` | `#1A1A1A` | Main content background |
+| `--foreground` | `0 0% 95%` | `#F2F2F2` | Primary text |
+| `--card` | `0 0% 13%` | `#212121` | Cards, elevated surfaces |
+| `--border` | `0 0% 22%` | `#383838` | Borders, dividers |
+| `--muted` | `0 0% 18%` | `#2E2E2E` | Muted backgrounds |
+| `--muted-foreground` | `0 0% 60%` | `#999999` | Secondary text, placeholders |
 
-### Accent Colors
-| Token | Hex/HSL | Usage |
-|-------|---------|-------|
-| `--primary` | `hsl(191 89% 45%)` | #0DA8D6 - Primary actions, links |
-| `--primary-foreground` | `hsl(0 0% 100%)` | Text on primary bg |
-| `--success` | `hsl(142 71% 45%)` | #22C55E - Unlocked status, success |
-| `--success-foreground` | `hsl(0 0% 100%)` | Text on success bg |
-| `--destructive` | `hsl(0 62% 30%)` | Locked status, errors (dark) |
-| `--destructive-foreground` | `hsl(0 0% 95%)` | Text on destructive bg |
+### Sidebar Theme (Dark)
+| Token | HSL | Hex | Usage |
+|-------|-----|-----|-------|
+| `--sidebar-background` | `24 10% 10%` | `#1A1917` | Warm dark base |
+| `--sidebar-foreground` | `0 0% 93%` | `#EDEDED` | Sidebar text |
+| `--sidebar-primary` | `18 65% 59%` | `#D97755` | Active item, accents |
+| `--sidebar-accent` | `18 65% 59%` | `#D97755` | Hover/active backgrounds |
+| `--sidebar-border` | `0 0% 20%` | `#333333` | Sidebar borders |
+| `--sidebar-muted` | `0 0% 45%` | `#737373` | Section labels |
 
 ### Light Theme
-| Token | Hex/HSL | Usage |
-|-------|---------|-------|
-| `--background` | `hsl(0 0% 100%)` | Main background |
-| `--foreground` | `hsl(0 0% 15%)` | Primary text |
-| `--card` | `hsl(0 0% 100%)` | Cards, panels |
-| `--border` | `hsl(0 0% 90%)` | Borders, dividers |
-| `--muted-foreground` | `hsl(0 0% 45%)` | Muted text |
+| Token | HSL | Hex | Usage |
+|-------|-----|-----|-------|
+| `--background` | `0 0% 100%` | `#FFFFFF` | Main background |
+| `--foreground` | `0 0% 15%` | `#262626` | Primary text |
+| `--sidebar-background` | `0 0% 98%` | `#FAFAFA` | Sidebar background |
+| `--sidebar-primary` | `240 5.9% 10%` | `#18181B` | Active states |
 
 ---
 
@@ -51,8 +61,8 @@ Design system for a developer-focused docs synchronization platform. Emphasizes 
 
 ### Font Stack
 ```css
---font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
---font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+--font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 ```
 
 ### Type Scale
@@ -60,124 +70,145 @@ Design system for a developer-focused docs synchronization platform. Emphasizes 
 |-------|------|--------|-------------|-------|
 | `h1` | 24px | 700 | 1.2 | Page titles |
 | `h2` | 20px | 600 | 1.3 | Section headers |
-| `h3` | 16px | 600 | 1.4 | Card titles |
-| `body` | 14px | 400 | 1.5 | Body text |
-| `small` | 12px | 400 | 1.4 | Captions, labels |
-| `code` | 13px | 400 | 1.5 | Code, monospace |
+| `h3` | 18px | 600 | 1.4 | Card/sidebar titles |
+| `body` | 14px | 400 | 1.5 | Body text, menu items |
+| `label` | 12px | 500 | 1.4 | Section labels, badges |
+| `small` | 11px | 400 | 1.4 | Captions, tooltips |
+| `code` | 13px | 400 | 1.5 | Monospace content |
+
+### Font Weights
+- **400 Regular**: Body text, descriptions
+- **500 Medium**: Labels, badges, section headers
+- **600 Semibold**: Titles, nav items, buttons
+- **700 Bold**: Page headings, emphasis
 
 ---
 
 ## Spacing System
 
-Based on 4px base unit:
+Based on 4px base unit (Tailwind scale):
+| Token | Tailwind | Pixels | Usage |
+|-------|----------|--------|-------|
+| `1` | `p-1` | 4px | Tight gaps, icon spacing |
+| `2` | `p-2` | 8px | Button icon gaps, collapsed padding |
+| `3` | `p-3` | 12px | Menu item padding |
+| `4` | `p-4` | 16px | Card padding, header padding |
+| `5` | `p-5` | 20px | Section padding |
+| `6` | `p-6` | 24px | Large gaps, card content |
+| `8` | `p-8` | 32px | Page margins |
+
+---
+
+## Border Radius
+
 | Token | Value | Usage |
 |-------|-------|-------|
-| `--space-1` | 4px | Tight spacing |
-| `--space-2` | 8px | Icon gaps |
-| `--space-3` | 12px | Button padding |
-| `--space-4` | 16px | Card padding |
-| `--space-5` | 20px | Section gaps |
-| `--space-6` | 24px | Large gaps |
-| `--space-8` | 32px | Section margins |
+| `--radius` | `0.5rem` (8px) | Default (cards, modals) |
+| `rounded-lg` | `8px` | Cards, containers |
+| `rounded-md` | `6px` | Buttons, inputs |
+| `rounded-sm` | `4px` | Badges, small elements |
+| `rounded-full` | `9999px` | Avatars, pills |
 
 ---
 
 ## Components
 
-### Status Indicators
+### Sidebar (shadcn/ui)
 
-**Locked Status (Red)**
-```html
-<span class="status-locked">
-  <span class="status-dot bg-red-500"></span>
-  Locked
-</span>
+**Structure:**
+```tsx
+<SidebarProvider>
+  <Sidebar collapsible="icon">
+    <SidebarHeader />      // Logo, 32px icon
+    <SidebarContent>
+      <SidebarGroup>
+        <SidebarGroupLabel />  // Section title
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton isActive tooltip />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
+    </SidebarContent>
+    <SidebarFooter />      // Toggle trigger
+  </Sidebar>
+  <SidebarInset>{children}</SidebarInset>
+</SidebarProvider>
 ```
-- Background: `#EF4444` (solid dot)
-- Text: `#FCA5A5` (light red)
-- Use pulse animation for active lock
 
-**Unlocked Status (Green)**
-```html
-<span class="status-unlocked">
-  <span class="status-dot bg-green-500"></span>
-  Unlocked
-</span>
-```
-- Background: `#22C55E` (solid dot)
-- Text: `#86EFAC` (light green)
+**Dimensions:**
+| State | Width | Mobile Width | Icon Width |
+|-------|-------|--------------|------------|
+| Expanded | 256px (16rem) | 288px (18rem) | - |
+| Collapsed | 48px (3rem) | - | 48px |
+
+**Behavior:**
+- Keyboard shortcut: `Cmd/Ctrl + B` to toggle
+- Cookie persistence for state
+- Mobile: Sheet overlay
+- Desktop: Icon-only collapse with tooltips
 
 ### Buttons
 
-**Primary Button**
-```css
-.btn-primary {
-  background: hsl(191 89% 45%); /* #0DA8D6 brand cyan */
-  color: #FFFFFF;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: background 150ms;
-}
-.btn-primary:hover {
-  background: hsl(191 89% 40%); /* Darker cyan */
-}
-```
+**Variants (6):**
+| Variant | Background | Text | Border |
+|---------|------------|------|--------|
+| `default` | `--primary` | `--primary-foreground` | none |
+| `destructive` | `--destructive` | `--destructive-foreground` | none |
+| `outline` | transparent | `--foreground` | `--border` |
+| `secondary` | `--secondary` | `--secondary-foreground` | none |
+| `ghost` | transparent | `--foreground` | none |
+| `link` | transparent | `--primary` | none |
 
-**Secondary Button**
-```css
-.btn-secondary {
-  background: transparent;
-  border: 1px solid hsl(0 0% 22%);
-  color: hsl(0 0% 95%);
-  padding: 8px 16px;
-  border-radius: 6px;
-}
-```
-
-**Danger Button**
-```css
-.btn-danger {
-  background: hsl(0 84% 60%);
-  color: #FFFFFF;
-}
-```
+**Sizes:**
+| Size | Height | Padding | Font |
+|------|--------|---------|------|
+| `sm` | 32px | 12px | 12px |
+| `default` | 40px | 16px | 14px |
+| `lg` | 44px | 24px | 14px |
+| `icon` | 40px | 0 | - |
 
 ### Cards
 ```css
 .card {
-  background: hsl(0 0% 13%); /* --card */
-  border: 1px solid hsl(0 0% 22%); /* --border */
-  border-radius: 8px;
-  padding: 16px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 24px; /* p-6 */
 }
 ```
 
 ### Form Inputs
 ```css
 .input {
-  background: hsl(0 0% 10%); /* --background */
-  border: 1px solid hsl(0 0% 22%); /* --border */
-  border-radius: 6px;
+  height: 40px;
   padding: 8px 12px;
-  color: hsl(0 0% 95%); /* --foreground */
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--input));
+  border-radius: calc(var(--radius) - 2px); /* 6px */
 }
 .input:focus {
-  border-color: hsl(191 89% 45%); /* --primary */
-  outline: none;
-  box-shadow: 0 0 0 2px hsla(191, 89%, 45%, 0.2);
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
 }
 ```
 
-### Lock Status Banner
+### Status Indicators
+
+**Locked (Red):**
 ```css
-.lock-banner {
-  background: linear-gradient(90deg, #7F1D1D 0%, #991B1B 100%);
+.status-locked {
+  background: linear-gradient(90deg, #7F1D1D, #991B1B);
   border-left: 4px solid #EF4444;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  color: #FCA5A5;
+}
+```
+
+**Unlocked (Green):**
+```css
+.status-unlocked {
+  background: hsl(142 71% 45% / 0.1);
+  color: #22C55E;
 }
 ```
 
@@ -185,102 +216,142 @@ Based on 4px base unit:
 
 ## Layout Patterns
 
-### Sidebar Navigation
-- Width: 240px (desktop), collapsible
-- Background: `--brand-dark` (#333232)
-- Logo area: 64px height
-- Nav items: 40px height, 8px padding
-- Active state: `--brand-cyan` (#0DA8D6) accent
+### Sidebar + Inset Layout
+```tsx
+<div className="flex min-h-screen w-full">
+  <Sidebar />           // Fixed left
+  <SidebarInset>        // Flexible main content
+    {children}
+  </SidebarInset>
+</div>
+```
 
 ### Content Area
 - Max-width: 1200px (centered)
-- Padding: 24px
-- Card grid: 1 col mobile, 2-3 cols desktop
-- Background: `--brand-dark` (#333232)
+- Padding: 24px (p-6)
+- Background: `--background`
+
+### Grid System
+| Breakpoint | Columns | Gap |
+|------------|---------|-----|
+| Mobile | 1 | 16px |
+| `md` (768px) | 2 | 24px |
+| `lg` (1024px) | 3 | 24px |
 
 ### Responsive Breakpoints
 | Name | Width | Usage |
 |------|-------|-------|
 | `sm` | 640px | Mobile landscape |
 | `md` | 768px | Tablet |
-| `lg` | 1024px | Desktop |
+| `lg` | 1024px | Desktop (sidebar visible) |
 | `xl` | 1280px | Large desktop |
 
 ---
 
 ## Icons
 
-Use Lucide Icons (consistent with Tailwind ecosystem):
-- Size: 16px (small), 20px (default), 24px (large)
-- Stroke width: 1.5px
-- Color: inherit from parent
+**Library:** Lucide React (consistent with shadcn/ui)
 
-Common icons:
-- Lock: `<LockIcon />`
-- Unlock: `<UnlockIcon />`
-- Settings: `<SettingsIcon />`
-- Git: `<GitBranchIcon />`
-- Save: `<SaveIcon />`
-- Push: `<UploadCloudIcon />`
-- Edit: `<PencilIcon />`
+**Sizes:**
+| Size | Pixels | Class | Usage |
+|------|--------|-------|-------|
+| Small | 16px | `size-4` | Inline, badges |
+| Default | 20px | `size-5` | Menu items, buttons |
+| Large | 24px | `size-6` | Headers, empty states |
+
+**Common Icons:**
+- Navigation: `FolderKanban`, `FileText`, `Settings`
+- Actions: `PanelLeft`, `PanelLeftClose` (sidebar toggle)
+- Status: `Lock`, `Unlock`, `AlertCircle`
+- Git: `GitBranch`, `GitCommit`, `Upload`
 
 ---
 
 ## Animations
 
-### Micro-interactions
+### Transitions
 ```css
-/* Hover transitions */
 --transition-fast: 150ms ease;
---transition-normal: 250ms ease;
+--transition-normal: 200ms ease;
+--transition-slow: 300ms ease;
 
-/* Status pulse */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.pulse { animation: pulse 2s infinite; }
+/* Sidebar transition */
+transition-[width] duration-200 ease-linear
 ```
 
-### Loading States
-- Skeleton: `animate-pulse` with `bg-slate-700`
-- Spinner: 20px circle, 2px border, rotating
+### Micro-interactions
+- **Hover**: Background color shift, 150ms
+- **Focus**: Ring outline, 0ms (immediate)
+- **Active**: Scale 0.98, 100ms
+- **Sidebar collapse**: Width transition, 200ms
+
+### Status Animations
+```css
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+```
 
 ---
 
 ## Accessibility
 
-- Minimum contrast ratio: 4.5:1 (WCAG AA)
-- Focus states: visible 2px ring
-- Interactive elements: minimum 44x44px touch target
-- Reduced motion: respect `prefers-reduced-motion`
-- Keyboard navigation: all interactive elements focusable
+- **Contrast**: Minimum 4.5:1 (WCAG AA)
+- **Focus states**: 2px ring with `--ring` color
+- **Touch targets**: Minimum 44x44px
+- **Keyboard**: All interactive elements focusable
+- **Screen readers**: Proper ARIA labels, sr-only text
+- **Reduced motion**: Respects `prefers-reduced-motion`
+- **Tooltips**: Shown on collapsed sidebar items
 
 ---
 
-## Dark/Light Mode Toggle
+## Dark/Light Mode
 
-```javascript
-// Toggle class on <html> element
-document.documentElement.classList.toggle('dark');
+**Implementation:**
+```tsx
+// Tailwind class strategy
+<html className="dark">
+  {/* CSS variables switch automatically */}
+</html>
 ```
 
-CSS variable approach:
+**CSS Variables:**
 ```css
-:root { /* Light theme variables */ }
-.dark { /* Dark theme variables */ }
+:root { /* Light theme */ }
+.dark { /* Dark theme */ }
 ```
+
+**Primary Theme:** Dark mode (developer preference)
+
+---
+
+## UI Components Inventory
+
+### Shadcn/ui Components (12)
+`Button`, `Input`, `Card`, `Badge`, `Label`, `Skeleton`, `Sidebar`, `Sheet`, `Dialog`, `Tooltip`, `Collapsible`, `Separator`
+
+### Custom Components (9)
+`AppSidebar`, `ProjectCard`, `Header`, `LockStatus`, `LockBanner`, `FileTree`, `MarkdownPreview`, `MonacoEditor`, `CreateProjectDialog`
 
 ---
 
 ## File Structure
 ```
-docs/wireframes/
-  dashboard.html        # Projects list view
-  project-settings.html # Project configuration
-  docs-editor.html      # Monaco editor view
+apps/frontend/
+├── app/
+│   ├── globals.css          # CSS variables, base styles
+│   └── (dashboard)/layout.tsx # SidebarProvider wrapper
+├── components/
+│   ├── ui/                  # Shadcn/ui primitives
+│   │   ├── sidebar.tsx      # Full sidebar component system
+│   │   └── ...
+│   └── sidebar.tsx          # AppSidebar implementation
+└── tailwind.config.ts       # Theme extension
 ```
 
 ---
 
-*Last updated: 2026-01-03 (Phase 04 - Brand colors integration)*
+*Last updated: 2026-01-04 (Sidebar design system refactor with shadcn/ui)*

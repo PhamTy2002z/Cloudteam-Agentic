@@ -56,9 +56,9 @@ describe('ProjectCard', () => {
     expect(screen.getByText('Locked')).toBeInTheDocument();
   });
 
-  it('shows Open Editor button when unlocked', () => {
+  it('shows Open Project button when unlocked', () => {
     render(<ProjectCard project={mockProject} />);
-    expect(screen.getByText('Open Editor')).toBeInTheDocument();
+    expect(screen.getByText('Open Project')).toBeInTheDocument();
   });
 
   it('shows View Only button when locked', () => {

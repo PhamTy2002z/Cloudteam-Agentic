@@ -28,6 +28,14 @@
     --radius: 0.5rem;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
@@ -52,7 +60,32 @@
     --ring: 191 89% 45%;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    /* CCS Config Sidebar Theme - Warm Dark with Coral/Orange Accents */
+    --sidebar-background: 24 10% 10%; /* #1A1917 */
+    --sidebar-foreground: 0 0% 93%; /* #EDEDED */
+    --sidebar-primary: 18 65% 59%; /* #D97755 coral/orange */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 18 65% 59%; /* #D97755 for active bg */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 20%; /* #333333 */
+    --sidebar-ring: 18 65% 59%;
+    --sidebar-muted: 0 0% 45%; /* #737373 */
+    --sidebar-muted-foreground: 0 0% 53%; /* #888888 */
+    --sidebar-submenu-border: 0 0% 25%; /* #404040 */
   }
+
+  /* Color Usage Guidelines:
+   * --primary (#0DA8D6): CTAs, links, focus rings, interactive elements
+   * --sidebar-primary (#D97755): Sidebar accents, coral/orange highlights
+   * --success (#22C55E): Success states, unlocked status, confirmations
+   * --destructive (#7F1D1D): Error states, locked status, danger actions
+   * --warning (#F59E0B): Non-critical alerts, pending states
+   * --info (#60A5FA): Informational messages, tips, help text
+   */
 }
 
 @layer base {

@@ -136,7 +136,7 @@ export function CreateProjectDialog() {
             </Button>
             <Button
               type="submit"
-              className="bg-brand-cyan hover:bg-brand-cyan/90 text-white"
+              className="bg-primary hover:bg-primary/90 text-white"
               disabled={createProject.isPending}
             >
               {createProject.isPending ? 'Creating...' : 'Create Project'}

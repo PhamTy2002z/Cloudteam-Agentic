@@ -1,5 +1,6 @@
-import { Sidebar } from '@/components/sidebar';
+import { AppSidebar } from '@/components/sidebar';
 import { CreateProjectDialog } from '@/components/create-project-dialog';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 
 export default function DashboardLayout({
   children,
@@ -7,10 +8,12 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 lg:ml-60">{children}</main>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        {children}
+      </SidebarInset>
       <CreateProjectDialog />
-    </div>
+    </SidebarProvider>
   );
 }

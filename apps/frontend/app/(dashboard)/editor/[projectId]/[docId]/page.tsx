@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Upload, Settings } from 'lucide-react';
 import Link from 'next/link';
@@ -18,9 +18,9 @@ import { useUIStore } from '@/stores/ui-store';
 export default function EditorPage({
   params,
 }: {
-  params: Promise<{ projectId: string; docId: string }>;
+  params: { projectId: string; docId: string };
 }) {
-  const { projectId, docId } = use(params);
+  const { projectId, docId } = params;
   const router = useRouter();
   const fileName = decodeURIComponent(docId);
 
@@ -126,7 +126,7 @@ export default function EditorPage({
             size="sm"
             onClick={handlePush}
             disabled={pushDoc.isPending}
-            className="bg-brand-cyan hover:bg-brand-cyan/90 text-white"
+            className="bg-primary hover:bg-primary/90 text-white"
           >
             <Upload className="w-4 h-4 mr-2" />
             {pushDoc.isPending ? 'Pushing...' : 'Push'}

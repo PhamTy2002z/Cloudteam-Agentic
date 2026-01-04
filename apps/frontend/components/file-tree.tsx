@@ -44,7 +44,7 @@ export function FileTree({ docs, activeDoc, onSelect, onRefresh }: FileTreeProps
                 className={cn(
                   'w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-left transition',
                   activeDoc === doc.fileName
-                    ? 'bg-brand-cyan/20 text-brand-cyan'
+                    ? 'bg-primary/20 text-primary'
                     : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                 )}
               >

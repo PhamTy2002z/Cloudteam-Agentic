@@ -28,7 +28,7 @@ export function MarkdownPreview({ content }: MarkdownPreviewProps) {
       .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold text-foreground mb-4 pb-2 border-b border-border">$1</h1>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="text-foreground">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`([^`]+)`/g, '<code class="bg-secondary px-2 py-0.5 rounded text-brand-cyan text-sm font-mono">$1</code>')
+      .replace(/`([^`]+)`/g, '<code class="bg-secondary px-2 py-0.5 rounded text-primary text-sm font-mono">$1</code>')
       .replace(/^- (.*$)/gm, '<li class="ml-4 text-muted-foreground">$1</li>')
       .replace(/\n\n/g, '</p><p class="text-muted-foreground mb-4">')
       .replace(/^(?!<[h|l])/gm, '<p class="text-muted-foreground mb-4">');
