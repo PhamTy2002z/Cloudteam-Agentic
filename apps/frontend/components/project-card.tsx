@@ -50,7 +50,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
         <div className="flex items-center gap-2 pt-4 border-t border-border">
           <Button
-            variant={isLocked ? 'secondary' : 'default'}
+            variant={isLocked ? 'secondary' : 'neutral'}
             disabled={isLocked}
             className="flex-1"
             size="sm"

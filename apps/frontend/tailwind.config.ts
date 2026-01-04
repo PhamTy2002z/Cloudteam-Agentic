@@ -50,6 +50,11 @@ const config: Config = {
         success: {
           DEFAULT: 'hsl(var(--success))',
           foreground: 'hsl(var(--success-foreground))',
+          muted: 'hsl(var(--success-muted) / 0.15)',
+        },
+        neutral: {
+          DEFAULT: 'hsl(var(--neutral))',
+          foreground: 'hsl(var(--neutral-foreground))',
         },
         warning: {
           DEFAULT: 'hsl(var(--warning))',

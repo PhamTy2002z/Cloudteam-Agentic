@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   FileText,
@@ -55,6 +56,7 @@ export default function ProjectPage({
 }: {
   params: { id: string };
 }) {
+  const router = useRouter();
   const { data: project, isLoading } = useProject(params.id);
   const { data: docs, refetch: refetchDocs } = useDocs(params.id);
   const syncDocs = useSyncDocs(params.id);
@@ -111,7 +113,7 @@ export default function ProjectPage({
         description={project.repoUrl}
         action={{
           label: 'Settings',
-          onClick: () => window.location.href = `/projects/${params.id}/settings`,
+          onClick: () => router.push(`/projects/${params.id}/settings`),
         }}
       />
 
@@ -172,8 +174,8 @@ export default function ProjectPage({
             <Button
               onClick={handleSync}
               disabled={syncDocs.isPending}
+              variant="success"
               size="sm"
-              className="h-9"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${syncDocs.isPending ? 'animate-spin' : ''}`} />
               {syncDocs.isPending ? 'Syncing...' : 'Sync from GitHub'}

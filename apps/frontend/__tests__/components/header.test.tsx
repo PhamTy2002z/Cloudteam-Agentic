@@ -294,7 +294,7 @@ describe('Header', () => {
       const button = screen.getByRole('button');
       expect(button.className).toContain('bg-primary');
       expect(button.className).toContain('hover:bg-primary/90');
-      expect(button.className).toContain('text-white');
+      expect(button.className).toContain('text-primary-foreground');
     });
   });
 

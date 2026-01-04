@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   ArrowLeft,
   Trash2,
@@ -118,12 +117,15 @@ export default function ProjectSettingsPage({
       <div className="flex min-h-[calc(100vh-4rem)]">
         {/* Settings Navigation Sidebar */}
         <aside className="w-64 border-r border-border bg-card/50 p-4 shrink-0">
-          <Link href={`/projects/${id}`}>
-            <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Project
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-muted-foreground mb-4"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
 
           <Separator className="mb-4" />
 
@@ -267,6 +269,7 @@ export default function ProjectSettingsPage({
                       <Button
                         onClick={handleUpdateToken}
                         disabled={updateProject.isPending || !newToken.trim()}
+                        variant="neutral"
                       >
                         <Save className="w-4 h-4 mr-2" />
                         {updateProject.isPending ? 'Saving...' : 'Save'}
@@ -345,6 +348,7 @@ export default function ProjectSettingsPage({
                   <Button
                     onClick={handleGenerateKey}
                     disabled={generatingKey}
+                    variant="neutral"
                   >
                     <Key className="w-4 h-4 mr-2" />
                     {generatingKey ? 'Generating...' : 'Generate Key'}

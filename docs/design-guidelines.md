@@ -20,12 +20,24 @@ Design system for a developer-focused documentation synchronization platform. Fe
 ### Brand Colors
 | Token | HSL | Hex | Usage |
 |-------|-----|-----|-------|
-| `--primary` | `191 89% 45%` | `#0DA8D6` | Primary CTAs, links, focus rings |
+| `--primary` | `18 65% 59%` | `#D97755` | Primary CTAs, links, focus rings |
 | `--sidebar-primary` | `18 65% 59%` | `#D97755` | Sidebar accent, active states |
-| `--success` | `142 71% 45%` | `#22C55E` | Success states, unlocked |
+| `--success` | `142 71% 45%` | `#22C55E` | Success states, unlocked, positive actions |
+| `--success-muted` | `142 71% 45% / 0.15` | - | Subtle success backgrounds |
+| `--neutral` | `0 0% 95%` | `#F2F2F2` | Secondary buttons, outline actions |
+| `--neutral-foreground` | `0 0% 15%` | `#262626` | Text on neutral backgrounds |
 | `--destructive` | `0 62% 30%` | `#7F1D1D` | Error states, locked |
 | `--warning` | `38 92% 50%` | `#F59E0B` | Non-critical alerts, pending states |
 | `--info` | `217 91% 60%` | `#60A5FA` | Informational messages, tips |
+
+### Color Usage Matrix
+| Semantic | Color | Use Cases |
+|----------|-------|-----------|
+| Primary CTA | Coral `#D97755` | "New Project", "Save" (when dirty) |
+| Secondary | Neutral `#F2F2F2` | "Open", "Settings", outline buttons |
+| Success | Green `#22C55E` | "Unlocked", "Push", "Sync", confirmations |
+| Neutral | Gray `#999999` | Disabled, muted actions |
+| Destructive | Red `#EF4444` | "Danger Zone", delete actions |
 
 ### Dark Theme (Primary)
 | Token | HSL | Hex | Usage |

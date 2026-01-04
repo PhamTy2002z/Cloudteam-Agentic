@@ -28,6 +28,10 @@
     --radius: 0.5rem;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+    --success-muted: 142 71% 45%;
+    /* Neutral/White tokens for secondary actions */
+    --neutral: 0 0% 95%;
+    --neutral-foreground: 0 0% 15%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -60,6 +64,10 @@
     --ring: 18 65% 59%; /* #D97755 coral */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+    --success-muted: 142 71% 45%;
+    /* Neutral/White tokens for secondary actions */
+    --neutral: 0 0% 90%;
+    --neutral-foreground: 0 0% 10%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --info: 217 91% 60%;

@@ -8,6 +8,7 @@ interface HeaderProps {
   action?: {
     label: string;
     onClick: () => void;
+    variant?: 'default' | 'neutral';
   };
   searchBar?: {
     placeholder?: string;
@@ -35,7 +36,7 @@ export function Header({ title, description, action, searchBar }: HeaderProps) {
         )}
       </div>
       {action && (
-        <Button onClick={action.onClick} className="bg-primary hover:bg-primary/90 text-white">
+        <Button onClick={action.onClick} variant={action.variant || 'default'}>
           <Plus className="w-4 h-4 mr-2" />
           {action.label}
         </Button>

@@ -1,11 +1,16 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Upload, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
 import { MonacoEditor } from '@/components/monaco-editor';
 import { MarkdownPreview } from '@/components/markdown-preview';
 import { FileTree } from '@/components/file-tree';
@@ -36,6 +41,9 @@ export default function EditorPage({
 
   const editorDirty = useUIStore((s) => s.editorDirty);
   const setEditorDirty = useUIStore((s) => s.setEditorDirty);
+
+  // Explorer panel toggle state
+  const [explorerOpen, setExplorerOpen] = useState(true);
 
   // Track if we acquired lock to properly clean up
   const hasAcquiredLock = useRef(false);
@@ -110,10 +118,10 @@ export default function EditorPage({
         </div>
 
         <div className="flex items-center gap-3">
-          <Badge className="bg-success text-success-foreground">Editing</Badge>
+          <Badge className="bg-primary text-primary-foreground">Editing</Badge>
 
           <Button
-            variant="outline"
+            variant={editorDirty ? 'default' : 'outline'}
             size="sm"
             onClick={() => handleSave(doc.content)}
             disabled={updateDoc.isPending}
@@ -126,7 +134,7 @@ export default function EditorPage({
             size="sm"
             onClick={handlePush}
             disabled={pushDoc.isPending}
-            className="bg-primary hover:bg-primary/90 text-white"
+            variant="success"
           >
             <Upload className="w-4 h-4 mr-2" />
             {pushDoc.isPending ? 'Pushing...' : 'Push'}
@@ -142,32 +150,39 @@ export default function EditorPage({
 
       {/* Main editor area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* File tree */}
+        {/* File tree with animation */}
         <FileTree
           docs={docs || []}
           activeDoc={fileName}
           onSelect={handleSelectDoc}
           onRefresh={handleRefresh}
+          isOpen={explorerOpen}
+          onToggle={() => setExplorerOpen(!explorerOpen)}
         />
 
-        {/* Editor + Preview split */}
-        <div className="flex-1 flex">
-          <div className="flex-1 border-r border-border">
-            <MonacoEditor
-              initialContent={doc.content}
-              onSave={handleSave}
-              onAutoSave={handleSave}
-            />
-          </div>
-          <div className="w-[45%] flex flex-col bg-brand-dark-darker">
-            <div className="h-9 bg-secondary border-b border-border flex items-center px-4">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Preview
-              </span>
+        {/* Editor + Preview split with resizable panels */}
+        <ResizablePanelGroup orientation="horizontal" className="flex-1">
+          <ResizablePanel defaultSize={55} minSize={30}>
+            <div className="h-full border-r border-border">
+              <MonacoEditor
+                initialContent={doc.content}
+                onSave={handleSave}
+                onAutoSave={handleSave}
+              />
             </div>
-            <MarkdownPreview content={doc.content} />
-          </div>
-        </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={45} minSize={20}>
+            <div className="h-full flex flex-col bg-brand-dark-darker">
+              <div className="h-9 bg-secondary border-b border-border flex items-center px-4">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Preview
+                </span>
+              </div>
+              <MarkdownPreview content={doc.content} />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );

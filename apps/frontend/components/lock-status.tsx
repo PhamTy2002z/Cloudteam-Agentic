@@ -9,9 +9,9 @@ export function LockStatus({ lock }: LockStatusProps) {
   const isLocked = !!lock;
 
   return (
-    <Badge variant={isLocked ? 'destructive' : 'default'} className={isLocked ? '' : 'bg-success text-success-foreground'}>
+    <Badge variant={isLocked ? 'destructive' : 'default'} className={`px-2 py-0.5 text-xs ${isLocked ? '' : 'bg-success text-success-foreground'}`}>
       <span
-        className={`w-2 h-2 rounded-full mr-1.5 ${
+        className={`w-2 h-2 shrink-0 rounded-full ${
           isLocked ? 'bg-red-500 pulse-dot' : 'bg-green-500'
         }`}
       />
