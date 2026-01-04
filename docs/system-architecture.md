@@ -1,6 +1,6 @@
 # System Architecture - AI Toolkit Sync Platform
 
-**Last Updated:** 2026-01-03
+**Last Updated:** 2026-01-04
 **Phase:** Phase 06 Complete (Testing & Deployment Infrastructure)
 **Architecture Style:** Monolithic (Backend + Frontend) with Monorepo Structure
 **Status:** Production-Ready with Comprehensive Testing Infrastructure
@@ -654,9 +654,11 @@ Developer Machine
 
 ---
 
-## Unresolved Questions
+## Future Architecture Decisions
 
-1. **Redis Integration:** When to introduce caching layer? (Phase 03 or Phase 05?)
-2. **Database Backup Strategy:** Daily snapshots or continuous WAL archiving?
-3. **Multi-tenancy:** Separate databases per tenant or row-level security?
-4. **CDN Strategy:** Self-hosted or Cloudflare Workers for edge caching?
+The following items are marked for future phases:
+
+1. **Redis Integration:** Planned for Phase 07+ when caching layer is needed for high-traffic scenarios
+2. **Database Backup Strategy:** Daily snapshots recommended; WAL archiving for production (see deployment-guide.md)
+3. **Multi-tenancy:** Row-level security preferred for initial implementation; separate databases for enterprise tier
+4. **CDN Strategy:** Cloudflare recommended for static assets and DDoS protection

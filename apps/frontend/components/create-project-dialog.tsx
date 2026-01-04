@@ -14,6 +14,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateProject } from '@/hooks/use-projects';
 import { useUIStore } from '@/stores/ui-store';
+import {
+  FolderKanban,
+  Github,
+  KeyRound,
+  GitBranch,
+  FolderOpen,
+  Loader2,
+  Plus,
+} from 'lucide-react';
 
 export function CreateProjectDialog() {
   const { createDialogOpen, setCreateDialogOpen } = useUIStore();
@@ -53,93 +62,166 @@ export function CreateProjectDialog() {
 
   return (
     <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-      <DialogContent onClose={() => setCreateDialogOpen(false)}>
-        <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
-          <DialogDescription>
-            Connect a GitHub repository to sync documentation.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        onClose={() => setCreateDialogOpen(false)}
+        className="sm:max-w-[480px] p-0 gap-0 overflow-hidden"
+      >
+        {/* Header with gradient accent */}
+        <div className="relative px-6 pt-6 pb-4 border-b border-border/50">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
+          <DialogHeader className="relative">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+                <Plus className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">Create New Project</DialogTitle>
+                <DialogDescription className="mt-0.5">
+                  Connect a GitHub repository to sync documentation
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Project Name</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="My Project"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="repoUrl">Repository URL</Label>
-            <Input
-              id="repoUrl"
-              name="repoUrl"
-              placeholder="https://github.com/org/repo"
-              value={formData.repoUrl}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="token">GitHub Token (PAT)</Label>
-            <Input
-              id="token"
-              name="token"
-              type="password"
-              placeholder="ghp_..."
-              value={formData.token}
-              onChange={handleChange}
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              Token is encrypted before storage. Needs repo read/write access.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="branch">Branch</Label>
-              <Input
-                id="branch"
-                name="branch"
-                placeholder="main"
-                value={formData.branch}
-                onChange={handleChange}
-              />
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          {/* Form content */}
+          <div className="px-6 py-5 space-y-5">
+            {/* Project Info Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <FolderKanban className="w-3.5 h-3.5" />
+                Project Info
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-sm font-medium">
+                  Project Name
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="My Awesome Project"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="h-10"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="docsPath">Docs Path</Label>
-              <Input
-                id="docsPath"
-                name="docsPath"
-                placeholder="docs"
-                value={formData.docsPath}
-                onChange={handleChange}
-              />
+            {/* Separator */}
+            <div className="h-px bg-border/50" />
+
+            {/* GitHub Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <Github className="w-3.5 h-3.5" />
+                GitHub Connection
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="repoUrl" className="text-sm font-medium">
+                  Repository URL
+                </Label>
+                <Input
+                  id="repoUrl"
+                  name="repoUrl"
+                  placeholder="https://github.com/org/repo"
+                  value={formData.repoUrl}
+                  onChange={handleChange}
+                  required
+                  className="h-10 font-mono text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="token"
+                  className="text-sm font-medium flex items-center gap-1.5"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-muted-foreground" />
+                  Access Token (PAT)
+                </Label>
+                <Input
+                  id="token"
+                  name="token"
+                  type="password"
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  value={formData.token}
+                  onChange={handleChange}
+                  required
+                  className="h-10 font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground/80 flex items-center gap-1">
+                  <span className="inline-block w-1 h-1 rounded-full bg-green-500" />
+                  Encrypted at rest • Requires repo read/write scope
+                </p>
+              </div>
+
+              {/* Branch & Path - Compact row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="branch"
+                    className="text-sm font-medium flex items-center gap-1.5"
+                  >
+                    <GitBranch className="w-3.5 h-3.5 text-muted-foreground" />
+                    Branch
+                  </Label>
+                  <Input
+                    id="branch"
+                    name="branch"
+                    placeholder="main"
+                    value={formData.branch}
+                    onChange={handleChange}
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="docsPath"
+                    className="text-sm font-medium flex items-center gap-1.5"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
+                    Docs Path
+                  </Label>
+                  <Input
+                    id="docsPath"
+                    name="docsPath"
+                    placeholder="docs"
+                    value={formData.docsPath}
+                    onChange={handleChange}
+                    className="h-10"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <DialogFooter>
+          {/* Footer */}
+          <DialogFooter className="px-6 py-4 bg-muted/30 border-t border-border/50">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => setCreateDialogOpen(false)}
+              className="h-9"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="bg-primary hover:bg-primary/90 text-white"
               disabled={createProject.isPending}
+              className="h-9 min-w-[120px]"
             >
-              {createProject.isPending ? 'Creating...' : 'Create Project'}
+              {createProject.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Project'
+              )}
             </Button>
           </DialogFooter>
         </form>

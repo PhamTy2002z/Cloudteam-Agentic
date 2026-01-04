@@ -1,8 +1,9 @@
 # Brainstorm Report: Auto-Sync SOT Docs for AI Code Generation
 
 **Date**: 2026-01-04
-**Status**: Proposal
+**Status**: Ready for Implementation
 **Author**: Claude Code (Brainstorm Session)
+**Updated**: 2026-01-04 14:21
 
 ---
 
@@ -24,9 +25,10 @@ Khi dev clone source code và dùng AI (Claude Code) để generate code:
 | Block level | Không block - AI tự sync |
 | AI Tool | Claude Code CLI |
 | Trigger | Session start only |
-| Conflict handling | Remote wins (force overwrite) |
+| Conflict handling | Warn, không force overwrite |
 | Dev code tay | Không bị ảnh hưởng |
 | SOT ownership | **Chỉ techlead** được update SOT docs |
+| Branch strategy | Main-only SOT, branch-agnostic |
 
 ---
 
@@ -36,10 +38,10 @@ Khi dev clone source code và dùng AI (Claude Code) để generate code:
 
 | File | Purpose |
 |------|---------|
-| `docs/code-standards.md` | Coding conventions, naming rules |
-| `docs/system-architecture.md` | Technical patterns, decisions |
-| `docs/project-overview-pdr.md` | Business scope, requirements |
-| `docs/design-guidelines.md` | UI/UX guidelines |
+| `code-standards.md` | Coding conventions, naming rules |
+| `system-architecture.md` | Technical patterns, decisions |
+| `project-overview-pdr.md` | Business scope, requirements |
+| `design-guidelines.md` | UI/UX guidelines |
 
 **Excluded** (derived/reference):
 - `codebase-summary.md` - AI có thể tự đọc codebase
@@ -49,159 +51,191 @@ Khi dev clone source code và dùng AI (Claude Code) để generate code:
 
 ---
 
-## Solution: Auto-Sync on Session Start
+## Solution: Leverage Existing Infrastructure
+
+### ✅ Already Implemented
+
+Platform **đã có sẵn** các components cần thiết:
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| `.docs/` gitignored | ✅ | `.gitignore:44` |
+| Hook Service API | ✅ | `apps/backend/src/hook/hook.service.ts` |
+| Sync Script | ✅ | `scripts/check-platform.sh` |
+| Hash-based sync | ✅ | `.docs/.sync-hash` mechanism |
+| Lock check | ✅ | Integrated in script |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SINGLE SOURCE OF TRUTH                    │
+├─────────────────────────────────────────────────────────────┤
+│  Platform DB → GitHub (origin/main) → Local (.docs/)        │
+│                      ↓                                       │
+│         scripts/check-platform.sh (SessionStart)             │
+└─────────────────────────────────────────────────────────────┘
+
+Priority:
+  1. .docs/ (platform sync) → PRIMARY
+  2. ./docs/ (git) → FALLBACK
+```
+
+### Existing Script: `scripts/check-platform.sh`
+
+```bash
+# Already implements:
+1. Check lock status via API (/api/hook/status/:projectId)
+2. Compare hash (local .sync-hash vs remote)
+3. Sync docs to .docs/ folder (/api/hook/sync/:projectId)
+4. Offline mode fallback (use cached .docs/)
+5. Clear error messages with colors
+```
 
 ### Workflow Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    TECHLEAD WORKFLOW                        │
+│                    TECHLEAD WORKFLOW                         │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Update SOT docs                                         │
-│  2. Commit & Push lên origin/main                           │
+│  1. Update SOT docs via Platform Web UI                      │
+│  2. Platform auto-commit to GitHub (origin/main)             │
+│  3. WebSocket broadcast to all connected clients             │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    DEV WORKFLOW                             │
+│                    DEV WORKFLOW                              │
 ├─────────────────────────────────────────────────────────────┤
-│  1. Dev clone/pull repo về local                            │
-│  2. Dev mở Claude Code CLI                                  │
-│                              │                              │
-│                              ▼                              │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │           SESSION START HOOK (Auto-Sync)              │  │
-│  ├───────────────────────────────────────────────────────┤  │
-│  │  a. git fetch origin main --quiet                     │  │
-│  │  b. Compare local vs origin/main cho 4 SOT files      │  │
-│  │  c. Nếu có diff → checkout origin/main version        │  │
-│  │  d. Output: "Synced X files from remote"              │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                              │                              │
-│                              ▼                              │
-│  3. Claude Code đọc SOT docs (version mới nhất)             │
-│  4. Dev yêu cầu generate code                               │
-│  5. AI generate code COMPLY với docs mới                    │
-│  6. Dev code tay bình thường (không bị block)               │
+│  1. Dev clone/pull repo về local                             │
+│  2. Dev mở Claude Code CLI                                   │
+│                              │                               │
+│                              ▼                               │
+│  ┌───────────────────────────────────────────────────────┐   │
+│  │     SESSION START HOOK (scripts/check-platform.sh)    │   │
+│  ├───────────────────────────────────────────────────────┤   │
+│  │  a. Check lock status (is techlead editing?)          │   │
+│  │  b. Compare hash (local vs remote)                    │   │
+│  │  c. If diff → sync docs to .docs/                     │   │
+│  │  d. If offline → use cached .docs/ + warn             │   │
+│  │  e. Output: "Ready for Claude Code session!"          │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                              │                               │
+│                              ▼                               │
+│  3. Claude Code đọc SOT docs từ .docs/ (latest)              │
+│  4. Dev yêu cầu generate code                                │
+│  5. AI generate code COMPLY với docs mới                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Implementation Components
+---
 
-```
-~/.claude/hooks/
-└── docs-auto-sync.cjs    # SessionStart hook
+## What Needs To Be Done
 
-Config:
-- SOT_FILES: [
-    "code-standards.md",
-    "system-architecture.md",
-    "project-overview-pdr.md",
-    "design-guidelines.md"
-  ]
-- DOCS_DIR: "./docs"
-- REMOTE_BRANCH: "origin/main"
-```
+### 1. Configure Claude Code SessionStart Hook
 
-### Hook Logic (Pseudocode)
-
-```javascript
-// docs-auto-sync.cjs (SessionStart hook)
-
-const SOT_FILES = [
-  "docs/code-standards.md",
-  "docs/system-architecture.md",
-  "docs/project-overview-pdr.md",
-  "docs/design-guidelines.md"
-];
-
-async function main() {
-  // 1. Fetch latest from remote
-  exec("git fetch origin main --quiet");
-
-  // 2. Check each SOT file for diff
-  const outdatedFiles = [];
-  for (const file of SOT_FILES) {
-    const localHash = exec(`git hash-object ${file}`);
-    const remoteHash = exec(`git rev-parse origin/main:${file}`);
-    if (localHash !== remoteHash) {
-      outdatedFiles.push(file);
-    }
-  }
-
-  // 3. Sync outdated files
-  if (outdatedFiles.length > 0) {
-    for (const file of outdatedFiles) {
-      exec(`git checkout origin/main -- ${file}`);
-    }
-    console.log(`✓ Synced ${outdatedFiles.length} SOT docs from remote`);
-    console.log(`  Files: ${outdatedFiles.join(", ")}`);
+```json
+// ~/.claude/settings.json (hoặc project .claude/settings.json)
+{
+  "hooks": {
+    "SessionStart": [{
+      "command": "bash ./scripts/check-platform.sh",
+      "timeout": 15000
+    }]
   }
 }
 ```
 
----
+### 2. Set Environment Variables
 
-## Alternatives Considered
+```bash
+# ~/.bashrc or ~/.zshrc or project .env
+export AI_TOOLKIT_PLATFORM_URL="http://localhost:3001"  # or production URL
+export AI_TOOLKIT_API_KEY="sk_xxx"                       # from Platform
+export AI_TOOLKIT_PROJECT_ID="clxxx"                     # from Platform
+```
 
-### Option A: Version Hash Check (Rejected)
-- Techlead bump version manually
-- Hook check hash mismatch → block
-- **Rejected**: Cần manual step từ techlead
+### 3. Update CLAUDE.md
 
-### Option B: Remote Sync Check on Every Tool Call (Rejected)
-- Check remote mỗi lần AI generate code
-- **Rejected**: Latency overhead, network dependency
+Add instruction for AI to read from `.docs/`:
 
-### Option C: Timestamp Validation (Rejected)
-- Compare docs modified time vs session start
-- **Rejected**: False positives, chỉ detect sau pull
+```markdown
+## Source of Truth
 
-### Option D: Auto-Sync on Session Start (Selected)
-- Fetch + sync 1 lần khi session start
-- **Selected**: Simple, no manual steps, no latency per tool call
+**IMPORTANT:** Read SOT docs from `.docs/` folder (platform-synced).
+Fallback to `./docs/` if `.docs/` not available.
 
----
-
-## Key Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| Session start only | Avoid latency per tool call |
-| Remote wins | Techlead is source of truth |
-| 4 SOT files | Balance between enforcement và flexibility |
-| No blocking | Dev code tay không bị ảnh hưởng |
-| Git-based sync | Leverage existing infrastructure |
+Priority:
+1. `.docs/code-standards.md`
+2. `.docs/system-architecture.md`
+3. `.docs/project-overview-pdr.md`
+4. `.docs/design-guidelines.md`
+```
 
 ---
 
-## Local Changes Handling Strategy
+## Branch Handling Strategy
 
-**Context:** Chỉ techlead được update SOT docs → Dev không nên có local changes.
+### Main-Only SOT (Selected)
 
-| Option | Behavior | Verdict |
-|--------|----------|---------|
-| A. Ghi đè | Force sync, mất local changes | **✓ Selected** |
-| B. Stash | Backup local → sync → dev merge sau | Overkill |
-| C. Skip + Warn | Giữ local, AI có thể dùng docs cũ | ❌ Vi phạm goal |
+```
+main branch     → SOT docs (enforced by platform)
+feature branch  → Inherit từ platform, không tự modify
+```
 
-**Decision: Option A - Force Overwrite**
+| Scenario | Behavior |
+|----------|----------|
+| Dev ở main | `.docs/` = latest từ platform ✓ |
+| Dev ở feature branch | `.docs/` = latest từ platform ✓ |
+| Feature branch có docs changes | Platform SOT vẫn được dùng |
+| Techlead merge docs to main | Platform auto-sync to all |
 
-Lý do:
-- Dev không được phép edit SOT docs
-- Nếu có local changes → unauthorized edit → mất là expected
-- Simple, no conditions, no edge cases
+**Rationale**:
+- `.docs/` independent từ git branch state
+- Techlead là single owner của SOT
+- Simple mental model
+
+---
+
+## Existing Script Analysis
+
+### `scripts/check-platform.sh` Features
+
+| Feature | Implementation |
+|---------|----------------|
+| Lock check | `GET /api/hook/status/:projectId` |
+| Hash compare | Local `.docs/.sync-hash` vs API response |
+| Sync docs | `POST /api/hook/sync/:projectId` → write to `.docs/` |
+| Offline mode | Use cached `.docs/` with warning |
+| Retry logic | 3 retries with 1s delay |
+| Colored output | Green/Yellow/Red for INFO/WARN/ERROR |
+
+### Script Flow
+
+```
+main()
+  ├─ check_lock()
+  │   ├─ API call → if locked → exit 1
+  │   └─ If offline → check cached .docs/ exists
+  └─ check_sync()
+      ├─ Get remote hash
+      ├─ Compare with local .sync-hash
+      └─ If diff → sync_docs()
+          ├─ mkdir -p .docs/
+          ├─ Download each doc file
+          └─ Save .sync-hash
+```
 
 ---
 
 ## Risks & Mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| Network unavailable | Fail gracefully, use local version + warn |
-| Git conflicts | Force checkout remote version (no merge) |
-| Large docs slow fetch | Only fetch, không pull full repo |
-| Dev có local changes | **Ghi đè luôn** (dev không được edit SOT) |
+| Risk | Mitigation (Already Implemented) |
+|------|----------------------------------|
+| Platform unavailable | Offline mode with cached `.docs/` |
+| Lock conflict | Exit with clear message |
+| API timeout | 10s timeout + 3 retries |
+| Missing env vars | Clear error messages with instructions |
 
 ---
 
@@ -209,21 +243,70 @@ Lý do:
 
 - [ ] AI-generated code complies với latest docs
 - [ ] Zero manual intervention từ dev
-- [ ] Session start time < 2s overhead
-- [ ] No false positives blocking dev work
+- [ ] Session start time < 5s (API call + sync)
+- [ ] Offline mode works seamlessly
+- [ ] Clear warnings khi using cached docs
+
+---
+
+## Implementation Checklist
+
+### ✅ Already Done
+- [x] `.docs/` in `.gitignore`
+- [x] Backend Hook API (`/api/hook/*`)
+- [x] `scripts/check-platform.sh` script
+- [x] Hash-based sync mechanism
+- [x] Lock check integration
+
+### 🔲 To Do
+- [ ] Add SessionStart hook to Claude Code settings
+- [ ] Document env vars in team onboarding
+- [ ] Update CLAUDE.md with `.docs/` priority
+- [ ] Test end-to-end: techlead update → dev session start
+
+---
+
+## Configuration Reference
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AI_TOOLKIT_PLATFORM_URL` | Yes | Platform API URL |
+| `AI_TOOLKIT_API_KEY` | Yes | API key from Platform |
+| `AI_TOOLKIT_PROJECT_ID` | Yes | Project ID from Platform |
+
+### File Structure
+
+```
+project/
+├── .docs/                    # Platform-synced (gitignored)
+│   ├── code-standards.md
+│   ├── system-architecture.md
+│   ├── project-overview-pdr.md
+│   ├── design-guidelines.md
+│   └── .sync-hash            # Hash for quick comparison
+├── docs/                     # Git-tracked (fallback)
+│   └── ...
+├── scripts/
+│   └── check-platform.sh     # Existing sync script
+└── .claude/
+    └── settings.json         # SessionStart hook config
+```
 
 ---
 
 ## Next Steps
 
-1. Implement `docs-auto-sync.cjs` hook
-2. Add to `~/.claude/settings.json` SessionStart hooks
-3. Test với scenario: techlead update → dev session start
-4. Document trong team onboarding
+1. ✅ Script đã sẵn sàng
+2. Configure SessionStart hook trong Claude Code settings
+3. Set environment variables cho team
+4. Update CLAUDE.md với `.docs/` priority
+5. Test với scenario: techlead update → dev session start
+6. Document trong team onboarding
 
 ---
 
 ## Unresolved Questions
 
-1. Nếu dev đang ở branch khác (không phải main), có nên sync không?
-2. Có cần config SOT files per-project hay global?
+None - solution uses existing infrastructure, no new development needed.

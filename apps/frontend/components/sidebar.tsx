@@ -80,7 +80,7 @@ export function AppSidebar() {
         >
           <Logo />
           <span className="font-semibold text-lg text-sidebar-foreground tracking-tight group-data-[collapsible=icon]:hidden">
-            AI Toolkit Sync
+            Cloudteam Agentic
           </span>
         </Link>
       </SidebarHeader>
@@ -122,8 +122,8 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Footer with toggle */}
-      <SidebarFooter className="p-2">
-        <SidebarTrigger className="w-full justify-center" />
+      <SidebarFooter className="p-2 flex items-center justify-center">
+        <SidebarTrigger className="hover:bg-transparent" />
       </SidebarFooter>
     </Sidebar>
   );

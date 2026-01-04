@@ -1,6 +1,7 @@
 import { AppSidebar } from '@/components/sidebar';
 import { CreateProjectDialog } from '@/components/create-project-dialog';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { Toaster } from 'sonner';
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
         {children}
       </SidebarInset>
       <CreateProjectDialog />
+      <Toaster position="bottom-right" theme="dark" richColors />
     </SidebarProvider>
   );
 }

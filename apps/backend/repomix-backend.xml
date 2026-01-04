@@ -1,0 +1,3034 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: src/**/*.ts
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+src/
+  common/
+    decorators/
+      api-key.decorator.ts
+    filters/
+      global-exception.filter.ts
+    guards/
+      api-key.guard.ts
+    services/
+      crypto.module.ts
+      crypto.service.ts
+  docs/
+    dto/
+      update-doc.dto.ts
+    docs.controller.spec.ts
+    docs.controller.ts
+    docs.module.ts
+    docs.service.spec.ts
+    docs.service.ts
+  github/
+    github.module.ts
+    github.service.spec.ts
+    github.service.ts
+  hook/
+    hook.controller.ts
+    hook.module.ts
+    hook.service.ts
+  lock/
+    dto/
+      acquire-lock.dto.ts
+      extend-lock.dto.ts
+    lock.controller.spec.ts
+    lock.controller.ts
+    lock.module.ts
+    lock.service.spec.ts
+    lock.service.ts
+  prisma/
+    prisma.module.ts
+    prisma.service.ts
+  projects/
+    dto/
+      create-project.dto.ts
+      update-project.dto.ts
+    projects.controller.spec.ts
+    projects.controller.ts
+    projects.module.ts
+    projects.service.spec.ts
+    projects.service.ts
+  websocket/
+    websocket.gateway.ts
+    websocket.module.ts
+  app.module.ts
+  main.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/common/decorators/api-key.decorator.ts">
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { Project } from '@prisma/client';
+
+export const CurrentProject = createParamDecorator(
+  (data: unknown, ctx: ExecutionContext): Project => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.project;
+  },
+);
+</file>
+
+<file path="src/common/filters/global-exception.filter.ts">
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import { Request, Response } from 'express';
+
+@Catch()
+export class GlobalExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger('ExceptionFilter');
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const message =
+      exception instanceof HttpException
+        ? exception.message
+        : 'Internal server error';
+
+    this.logger.error(
+      `${request.method} ${request.url} - ${status} - ${message}`,
+      exception instanceof Error ? exception.stack : '',
+    );
+
+    response.status(status).json({
+      statusCode: status,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      message,
+    });
+  }
+}
+</file>
+
+<file path="src/common/guards/api-key.guard.ts">
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+
+@Injectable()
+export class ApiKeyGuard implements CanActivate {
+  constructor(private prisma: PrismaService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const apiKey = request.headers['x-api-key'];
+
+    if (!apiKey) {
+      throw new UnauthorizedException('API key required');
+    }
+
+    const key = await this.prisma.apiKey.findUnique({
+      where: { key: apiKey },
+      include: { project: true },
+    });
+
+    if (!key || !key.isActive) {
+      throw new UnauthorizedException('Invalid or inactive API key');
+    }
+
+    request.project = key.project;
+    return true;
+  }
+}
+</file>
+
+<file path="src/common/services/crypto.module.ts">
+import { Global, Module } from '@nestjs/common';
+import { CryptoService } from './crypto.service';
+
+@Global()
+@Module({
+  providers: [CryptoService],
+  exports: [CryptoService],
+})
+export class CryptoModule {}
+</file>
+
+<file path="src/common/services/crypto.service.ts">
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  createHash,
+} from 'crypto';
+
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+
+@Injectable()
+export class CryptoService {
+  private readonly key: Buffer;
+
+  constructor(private configService: ConfigService) {
+    const secret = this.configService.get<string>('ENCRYPTION_KEY');
+    if (!secret || secret.length < 32) {
+      throw new Error('ENCRYPTION_KEY must be at least 32 characters');
+    }
+    this.key = createHash('sha256').update(secret).digest();
+  }
+
+  encrypt(plaintext: string): string {
+    const iv = randomBytes(IV_LENGTH);
+    const cipher = createCipheriv(ALGORITHM, this.key, iv);
+
+    let encrypted = cipher.update(plaintext, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    const authTag = cipher.getAuthTag();
+
+    return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+  }
+
+  decrypt(ciphertext: string): string {
+    const [ivHex, authTagHex, encrypted] = ciphertext.split(':');
+
+    if (!ivHex || !authTagHex || !encrypted) {
+      throw new Error('Invalid ciphertext format');
+    }
+
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const decipher = createDecipheriv(ALGORITHM, this.key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+  }
+
+  computeHash(content: string): string {
+    return createHash('sha256').update(content).digest('hex');
+  }
+}
+</file>
+
+<file path="src/docs/dto/update-doc.dto.ts">
+import { IsString, IsNotEmpty } from 'class-validator';
+
+export class UpdateDocDto {
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
+}
+</file>
+
+<file path="src/docs/docs.controller.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { DocsController } from './docs.controller';
+import { DocsService } from './docs.service';
+import { UpdateDocDto } from './dto/update-doc.dto';
+
+describe('DocsController', () => {
+  let controller: DocsController;
+  let service: DocsService;
+
+  const mockDoc = {
+    id: 'doc-123',
+    projectId: 'project-123',
+    fileName: 'README.md',
+    content: '# Test Content',
+    hash: 'abc123',
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockDocsService = {
+    findAllByProject: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    syncFromGitHub: jest.fn(),
+    pushToGitHub: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [DocsController],
+      providers: [{ provide: DocsService, useValue: mockDocsService }],
+    }).compile();
+
+    controller = module.get<DocsController>(DocsController);
+    service = module.get<DocsService>(DocsService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('findAll', () => {
+    it('should return all docs for a project', async () => {
+      const docs = [mockDoc, { ...mockDoc, id: 'doc-456', fileName: 'GUIDE.md' }];
+      mockDocsService.findAllByProject.mockResolvedValue(docs);
+
+      const result = await controller.findAll('project-123');
+
+      expect(service.findAllByProject).toHaveBeenCalledWith('project-123');
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a doc by projectId and fileName', async () => {
+      mockDocsService.findOne.mockResolvedValue(mockDoc);
+
+      const result = await controller.findOne('project-123', 'README.md');
+
+      expect(service.findOne).toHaveBeenCalledWith('project-123', 'README.md');
+      expect(result.fileName).toBe('README.md');
+    });
+  });
+
+  describe('update', () => {
+    it('should update a doc', async () => {
+      const dto: UpdateDocDto = { content: '# Updated Content' };
+      mockDocsService.update.mockResolvedValue({
+        ...mockDoc,
+        content: dto.content,
+      });
+
+      const result = await controller.update('project-123', 'README.md', dto);
+
+      expect(service.update).toHaveBeenCalledWith(
+        'project-123',
+        'README.md',
+        dto,
+      );
+      expect(result.content).toBe(dto.content);
+    });
+  });
+
+  describe('syncFromGitHub', () => {
+    it('should sync docs from GitHub', async () => {
+      const syncedDocs = [mockDoc, { ...mockDoc, id: 'doc-456' }];
+      mockDocsService.syncFromGitHub.mockResolvedValue(syncedDocs);
+
+      const result = await controller.syncFromGitHub('project-123');
+
+      expect(service.syncFromGitHub).toHaveBeenCalledWith('project-123');
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('pushToGitHub', () => {
+    it('should push doc to GitHub', async () => {
+      mockDocsService.pushToGitHub.mockResolvedValue({ success: true });
+
+      const result = await controller.pushToGitHub('project-123', 'README.md');
+
+      expect(service.pushToGitHub).toHaveBeenCalledWith(
+        'project-123',
+        'README.md',
+      );
+      expect(result).toEqual({ success: true });
+    });
+  });
+});
+</file>
+
+<file path="src/docs/docs.controller.ts">
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Body,
+  Param,
+} from '@nestjs/common';
+import { DocsService } from './docs.service';
+import { UpdateDocDto } from './dto/update-doc.dto';
+
+@Controller('projects/:projectId/docs')
+export class DocsController {
+  constructor(private readonly docsService: DocsService) {}
+
+  @Get()
+  findAll(@Param('projectId') projectId: string) {
+    return this.docsService.findAllByProject(projectId);
+  }
+
+  @Get(':fileName')
+  findOne(
+    @Param('projectId') projectId: string,
+    @Param('fileName') fileName: string,
+  ) {
+    return this.docsService.findOne(projectId, fileName);
+  }
+
+  @Put(':fileName')
+  update(
+    @Param('projectId') projectId: string,
+    @Param('fileName') fileName: string,
+    @Body() dto: UpdateDocDto,
+  ) {
+    return this.docsService.update(projectId, fileName, dto);
+  }
+
+  @Post('sync')
+  syncFromGitHub(@Param('projectId') projectId: string) {
+    return this.docsService.syncFromGitHub(projectId);
+  }
+
+  @Post(':fileName/push')
+  pushToGitHub(
+    @Param('projectId') projectId: string,
+    @Param('fileName') fileName: string,
+  ) {
+    return this.docsService.pushToGitHub(projectId, fileName);
+  }
+}
+</file>
+
+<file path="src/docs/docs.module.ts">
+import { Module } from '@nestjs/common';
+import { DocsController } from './docs.controller';
+import { DocsService } from './docs.service';
+import { GitHubModule } from '../github/github.module';
+import { CryptoModule } from '../common/services/crypto.module';
+
+@Module({
+  imports: [GitHubModule, CryptoModule],
+  controllers: [DocsController],
+  providers: [DocsService],
+  exports: [DocsService],
+})
+export class DocsModule {}
+</file>
+
+<file path="src/docs/docs.service.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { DocsService } from './docs.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { GitHubService } from '../github/github.service';
+import { NotFoundException } from '@nestjs/common';
+import { UpdateDocDto } from './dto/update-doc.dto';
+
+describe('DocsService', () => {
+  let service: DocsService;
+  let prisma: PrismaService;
+  let github: GitHubService;
+
+  const mockProject = {
+    id: 'project-123',
+    name: 'Test Project',
+    repoUrl: 'https://github.com/test/repo',
+    token: 'ghp_test_token',
+    branch: 'main',
+    docsPath: 'docs',
+  };
+
+  const mockDoc = {
+    id: 'doc-123',
+    projectId: 'project-123',
+    fileName: 'README.md',
+    content: '# Test Content',
+    hash: 'abc123',
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockPrismaService = {
+    doc: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+    },
+    project: {
+      findUnique: jest.fn(),
+    },
+  };
+
+  const mockGitHubService = {
+    computeHash: jest.fn(),
+    getAllDocs: jest.fn(),
+    pushDoc: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        DocsService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: GitHubService, useValue: mockGitHubService },
+      ],
+    }).compile();
+
+    service = module.get<DocsService>(DocsService);
+    prisma = module.get<PrismaService>(PrismaService);
+    github = module.get<GitHubService>(GitHubService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('findAllByProject', () => {
+    it('should return all docs for a project', async () => {
+      const docs = [mockDoc, { ...mockDoc, id: 'doc-456', fileName: 'GUIDE.md' }];
+      mockPrismaService.doc.findMany.mockResolvedValue(docs);
+
+      const result = await service.findAllByProject('project-123');
+
+      expect(prisma.doc.findMany).toHaveBeenCalledWith({
+        where: { projectId: 'project-123' },
+        orderBy: { fileName: 'asc' },
+      });
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array when no docs exist', async () => {
+      mockPrismaService.doc.findMany.mockResolvedValue([]);
+
+      const result = await service.findAllByProject('project-123');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a doc by projectId and fileName', async () => {
+      mockPrismaService.doc.findUnique.mockResolvedValue(mockDoc);
+
+      const result = await service.findOne('project-123', 'README.md');
+
+      expect(prisma.doc.findUnique).toHaveBeenCalledWith({
+        where: {
+          projectId_fileName: { projectId: 'project-123', fileName: 'README.md' },
+        },
+      });
+      expect(result.fileName).toBe('README.md');
+    });
+
+    it('should throw NotFoundException when doc not found', async () => {
+      mockPrismaService.doc.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.findOne('project-123', 'NONEXISTENT.md'),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.findOne('project-123', 'NONEXISTENT.md'),
+      ).rejects.toThrow('Doc NONEXISTENT.md not found');
+    });
+  });
+
+  describe('update', () => {
+    it('should update existing doc', async () => {
+      const dto: UpdateDocDto = { content: '# Updated Content' };
+      const updatedDoc = { ...mockDoc, content: dto.content, version: 2 };
+
+      mockGitHubService.computeHash.mockReturnValue('newhash123');
+      mockPrismaService.doc.upsert.mockResolvedValue(updatedDoc);
+
+      const result = await service.update('project-123', 'README.md', dto);
+
+      expect(github.computeHash).toHaveBeenCalledWith(dto.content);
+      expect(prisma.doc.upsert).toHaveBeenCalledWith({
+        where: {
+          projectId_fileName: { projectId: 'project-123', fileName: 'README.md' },
+        },
+        update: {
+          content: dto.content,
+          hash: 'newhash123',
+          version: { increment: 1 },
+        },
+        create: {
+          projectId: 'project-123',
+          fileName: 'README.md',
+          content: dto.content,
+          hash: 'newhash123',
+        },
+      });
+      expect(result.content).toBe(dto.content);
+    });
+
+    it('should create new doc if not exists', async () => {
+      const dto: UpdateDocDto = { content: '# New Doc' };
+      const newDoc = {
+        ...mockDoc,
+        fileName: 'NEW.md',
+        content: dto.content,
+        version: 1,
+      };
+
+      mockGitHubService.computeHash.mockReturnValue('newhash456');
+      mockPrismaService.doc.upsert.mockResolvedValue(newDoc);
+
+      const result = await service.update('project-123', 'NEW.md', dto);
+
+      expect(result.fileName).toBe('NEW.md');
+    });
+  });
+
+  describe('syncFromGitHub', () => {
+    it('should sync docs from GitHub', async () => {
+      const remoteDocs = [
+        { fileName: 'README.md', content: '# Remote README', sha: 'sha1' },
+        { fileName: 'GUIDE.md', content: '# Remote Guide', sha: 'sha2' },
+      ];
+
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockGitHubService.getAllDocs.mockResolvedValue(remoteDocs);
+      mockGitHubService.computeHash.mockReturnValue('hash123');
+      mockPrismaService.doc.upsert.mockResolvedValue(mockDoc);
+
+      const result = await service.syncFromGitHub('project-123');
+
+      expect(prisma.project.findUnique).toHaveBeenCalledWith({
+        where: { id: 'project-123' },
+      });
+      expect(github.getAllDocs).toHaveBeenCalledWith(
+        mockProject.token,
+        mockProject.repoUrl,
+        mockProject.docsPath,
+        mockProject.branch,
+      );
+      expect(result).toHaveLength(2);
+    });
+
+    it('should throw NotFoundException when project not found', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(service.syncFromGitHub('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.syncFromGitHub('non-existent')).rejects.toThrow(
+        'Project non-existent not found',
+      );
+    });
+
+    it('should handle empty docs directory', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockGitHubService.getAllDocs.mockResolvedValue([]);
+
+      const result = await service.syncFromGitHub('project-123');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('pushToGitHub', () => {
+    it('should push doc to GitHub', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.doc.findUnique.mockResolvedValue(mockDoc);
+      mockGitHubService.pushDoc.mockResolvedValue(undefined);
+
+      const result = await service.pushToGitHub('project-123', 'README.md');
+
+      expect(github.pushDoc).toHaveBeenCalledWith(
+        mockProject.token,
+        mockProject.repoUrl,
+        mockProject.docsPath,
+        'README.md',
+        mockDoc.content,
+        'Update README.md via AI Toolkit Platform',
+        mockProject.branch,
+      );
+      expect(result).toEqual({ success: true });
+    });
+
+    it('should throw NotFoundException when project not found', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.pushToGitHub('non-existent', 'README.md'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when doc not found', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.doc.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.pushToGitHub('project-123', 'NONEXISTENT.md'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getDocsHash', () => {
+    it('should compute combined hash of all docs', async () => {
+      const docs = [
+        { ...mockDoc, hash: 'hash1' },
+        { ...mockDoc, id: 'doc-456', hash: 'hash2' },
+      ];
+
+      mockPrismaService.doc.findMany.mockResolvedValue(docs);
+      mockGitHubService.computeHash.mockReturnValue('combinedhash');
+
+      const result = await service.getDocsHash('project-123');
+
+      expect(github.computeHash).toHaveBeenCalledWith('hash1hash2');
+      expect(result).toBe('combinedhash');
+    });
+
+    it('should return hash for empty docs', async () => {
+      mockPrismaService.doc.findMany.mockResolvedValue([]);
+      mockGitHubService.computeHash.mockReturnValue('emptyhash');
+
+      const result = await service.getDocsHash('project-123');
+
+      expect(github.computeHash).toHaveBeenCalledWith('');
+      expect(result).toBe('emptyhash');
+    });
+  });
+});
+</file>
+
+<file path="src/docs/docs.service.ts">
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Doc } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { GitHubService } from '../github/github.service';
+import { CryptoService } from '../common/services/crypto.service';
+import { UpdateDocDto } from './dto/update-doc.dto';
+
+@Injectable()
+export class DocsService {
+  constructor(
+    private prisma: PrismaService,
+    private github: GitHubService,
+    private crypto: CryptoService,
+  ) {}
+
+  // Check if token is encrypted (has format iv:authTag:encrypted)
+  private isEncrypted(token: string): boolean {
+    const parts = token.split(':');
+    return parts.length === 3 && parts[0].length === 32 && parts[1].length === 32;
+  }
+
+  // Get decrypted token, handles both encrypted and legacy raw tokens
+  private getDecryptedToken(token: string): string {
+    if (this.isEncrypted(token)) {
+      return this.crypto.decrypt(token);
+    }
+    // Legacy: token is stored as plain text
+    return token;
+  }
+
+  async findAllByProject(projectId: string) {
+    return this.prisma.doc.findMany({
+      where: { projectId },
+      orderBy: { fileName: 'asc' },
+    });
+  }
+
+  async findOne(projectId: string, fileName: string) {
+    const doc = await this.prisma.doc.findUnique({
+      where: {
+        projectId_fileName: { projectId, fileName },
+      },
+    });
+
+    if (!doc) {
+      throw new NotFoundException(`Doc ${fileName} not found`);
+    }
+
+    return doc;
+  }
+
+  async update(projectId: string, fileName: string, dto: UpdateDocDto) {
+    const hash = this.github.computeHash(dto.content);
+
+    return this.prisma.doc.upsert({
+      where: {
+        projectId_fileName: { projectId, fileName },
+      },
+      update: {
+        content: dto.content,
+        hash,
+        version: { increment: 1 },
+      },
+      create: {
+        projectId,
+        fileName,
+        content: dto.content,
+        hash,
+      },
+    });
+  }
+
+  async syncFromGitHub(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    const decryptedToken = this.getDecryptedToken(project.token);
+
+    let remoteDocs;
+    try {
+      remoteDocs = await this.github.getAllDocs(
+        decryptedToken,
+        project.repoUrl,
+        project.docsPath,
+        project.branch,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      if (message.includes('Bad credentials') || message.includes('401')) {
+        throw new BadRequestException('Invalid GitHub token. Please update your token in Settings.');
+      }
+      if (message.includes('Not Found') || message.includes('404')) {
+        throw new BadRequestException(`Folder "${project.docsPath}" not found in repository.`);
+      }
+      throw new BadRequestException(`GitHub sync failed: ${message}`);
+    }
+
+    const results = [];
+    for (const doc of remoteDocs) {
+      const hash = this.github.computeHash(doc.content);
+      const result = await this.prisma.doc.upsert({
+        where: {
+          projectId_fileName: { projectId, fileName: doc.fileName },
+        },
+        update: {
+          content: doc.content,
+          hash,
+        },
+        create: {
+          projectId,
+          fileName: doc.fileName,
+          content: doc.content,
+          hash,
+        },
+      });
+      results.push(result);
+    }
+
+    return results;
+  }
+
+  async pushToGitHub(projectId: string, fileName: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    const decryptedToken = this.getDecryptedToken(project.token);
+    const doc = await this.findOne(projectId, fileName);
+
+    await this.github.pushDoc(
+      decryptedToken,
+      project.repoUrl,
+      project.docsPath,
+      fileName,
+      doc.content,
+      `Update ${fileName} via AI Toolkit Platform`,
+      project.branch,
+    );
+
+    return { success: true };
+  }
+
+  async getDocsHash(projectId: string): Promise<string> {
+    const docs = await this.findAllByProject(projectId);
+    const combinedHash = docs.map((d: Doc) => d.hash).sort().join('');
+    return this.github.computeHash(combinedHash);
+  }
+}
+</file>
+
+<file path="src/github/github.module.ts">
+import { Module } from '@nestjs/common';
+import { GitHubService } from './github.service';
+
+@Module({
+  providers: [GitHubService],
+  exports: [GitHubService],
+})
+export class GitHubModule {}
+</file>
+
+<file path="src/github/github.service.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { GitHubService, DocFile } from './github.service';
+
+describe('GitHubService', () => {
+  let service: GitHubService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [GitHubService],
+    }).compile();
+
+    service = module.get<GitHubService>(GitHubService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('parseRepoUrl (private method via reflection)', () => {
+    it('should parse HTTPS GitHub URL', () => {
+      const result = (service as any).parseRepoUrl(
+        'https://github.com/owner/repo',
+      );
+      expect(result).toEqual({ owner: 'owner', repo: 'repo' });
+    });
+
+    it('should parse HTTPS GitHub URL with .git suffix', () => {
+      const result = (service as any).parseRepoUrl(
+        'https://github.com/owner/repo.git',
+      );
+      expect(result).toEqual({ owner: 'owner', repo: 'repo' });
+    });
+
+    it('should parse SSH GitHub URL', () => {
+      const result = (service as any).parseRepoUrl(
+        'git@github.com:owner/repo.git',
+      );
+      expect(result).toEqual({ owner: 'owner', repo: 'repo' });
+    });
+
+    it('should throw error for invalid URL', () => {
+      expect(() => {
+        (service as any).parseRepoUrl('invalid-url');
+      }).toThrow('Invalid GitHub URL: invalid-url');
+    });
+
+    it('should throw error for non-GitHub URL', () => {
+      expect(() => {
+        (service as any).parseRepoUrl('https://gitlab.com/owner/repo');
+      }).toThrow('Invalid GitHub URL');
+    });
+  });
+
+  describe('computeHash', () => {
+    it('should compute SHA-256 hash of content', () => {
+      const hash = service.computeHash('test content');
+      expect(hash).toBe('6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72');
+    });
+
+    it('should return different hash for different content', () => {
+      const hash1 = service.computeHash('content 1');
+      const hash2 = service.computeHash('content 2');
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('should return same hash for same content', () => {
+      const hash1 = service.computeHash('same content');
+      const hash2 = service.computeHash('same content');
+      expect(hash1).toBe(hash2);
+    });
+
+    it('should handle empty string', () => {
+      const hash = service.computeHash('');
+      expect(hash).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+    });
+
+    it('should handle unicode content', () => {
+      const hash = service.computeHash('Hello World');
+      expect(hash).toHaveLength(64); // SHA-256 produces 64 hex chars
+    });
+
+    it('should produce 64-character hex string', () => {
+      const hash = service.computeHash('any content');
+      expect(hash).toMatch(/^[a-f0-9]{64}$/);
+    });
+  });
+
+  describe('createClient (private method)', () => {
+    it('should create Octokit client with token', () => {
+      const client = (service as any).createClient('test-token');
+      expect(client).toBeDefined();
+      expect(client.repos).toBeDefined();
+    });
+  });
+
+  describe('getDocFile', () => {
+    it('should throw error for invalid repo URL', async () => {
+      await expect(
+        service.getDocFile(
+          'token',
+          'invalid-url',
+          'docs',
+          'README.md',
+          'main',
+        ),
+      ).rejects.toThrow('Invalid GitHub URL');
+    });
+  });
+
+  describe('getAllDocs', () => {
+    it('should throw error for invalid repo URL', async () => {
+      await expect(
+        service.getAllDocs('token', 'invalid-url', 'docs', 'main'),
+      ).rejects.toThrow('Invalid GitHub URL');
+    });
+  });
+
+  describe('pushDoc', () => {
+    it('should throw error for invalid repo URL', async () => {
+      await expect(
+        service.pushDoc(
+          'token',
+          'invalid-url',
+          'docs',
+          'README.md',
+          '# Content',
+          'Update',
+          'main',
+        ),
+      ).rejects.toThrow('Invalid GitHub URL');
+    });
+  });
+});
+</file>
+
+<file path="src/github/github.service.ts">
+import { Injectable, Logger } from '@nestjs/common';
+import { Octokit } from '@octokit/rest';
+import { createHash } from 'crypto';
+
+export interface DocFile {
+  fileName: string;
+  content: string;
+  sha?: string | null;
+}
+
+@Injectable()
+export class GitHubService {
+  private readonly logger = new Logger('GitHubService');
+
+  private createClient(token: string): Octokit {
+    return new Octokit({ auth: token });
+  }
+
+  private parseRepoUrl(repoUrl: string): { owner: string; repo: string } {
+    const match = repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+    if (!match) {
+      throw new Error(`Invalid GitHub URL: ${repoUrl}`);
+    }
+    return { owner: match[1], repo: match[2] };
+  }
+
+  async getDocFile(
+    token: string,
+    repoUrl: string,
+    docsPath: string,
+    fileName: string,
+    branch = 'main',
+  ): Promise<DocFile> {
+    const octokit = this.createClient(token);
+    const { owner, repo } = this.parseRepoUrl(repoUrl);
+    const path = `${docsPath}/${fileName}`;
+
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path,
+        ref: branch,
+      });
+
+      if (Array.isArray(data) || data.type !== 'file') {
+        throw new Error(`${path} is not a file`);
+      }
+
+      const content = Buffer.from(data.content, 'base64').toString('utf-8');
+      return {
+        fileName,
+        content,
+        sha: data.sha,
+      };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to get ${path}: ${errMsg}`);
+      throw error;
+    }
+  }
+
+  async getAllDocs(
+    token: string,
+    repoUrl: string,
+    docsPath: string,
+    branch = 'main',
+  ): Promise<DocFile[]> {
+    const octokit = this.createClient(token);
+    const { owner, repo } = this.parseRepoUrl(repoUrl);
+
+    try {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path: docsPath,
+        ref: branch,
+      });
+
+      if (!Array.isArray(data)) {
+        throw new Error(`${docsPath} is not a directory`);
+      }
+
+      const mdFiles = data.filter(
+        (item) => item.type === 'file' && item.name.endsWith('.md'),
+      );
+
+      const docs: DocFile[] = [];
+      for (const file of mdFiles) {
+        const doc = await this.getDocFile(
+          token,
+          repoUrl,
+          docsPath,
+          file.name,
+          branch,
+        );
+        docs.push(doc);
+      }
+
+      return docs;
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to list ${docsPath}: ${errMsg}`);
+      throw error;
+    }
+  }
+
+  async pushDoc(
+    token: string,
+    repoUrl: string,
+    docsPath: string,
+    fileName: string,
+    content: string,
+    message: string,
+    branch = 'main',
+    sha?: string,
+  ): Promise<void> {
+    const octokit = this.createClient(token);
+    const { owner, repo } = this.parseRepoUrl(repoUrl);
+    const path = `${docsPath}/${fileName}`;
+
+    let currentSha = sha;
+    if (!currentSha) {
+      try {
+        const { data } = await octokit.repos.getContent({
+          owner,
+          repo,
+          path,
+          ref: branch,
+        });
+        if (!Array.isArray(data)) {
+          currentSha = data.sha;
+        }
+      } catch {
+        // File doesn't exist, that's fine for new files
+      }
+    }
+
+    await octokit.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path,
+      message,
+      content: Buffer.from(content).toString('base64'),
+      branch,
+      sha: currentSha,
+    });
+
+    this.logger.log(`Pushed ${path} to ${owner}/${repo}`);
+  }
+
+  computeHash(content: string): string {
+    return createHash('sha256').update(content).digest('hex');
+  }
+}
+</file>
+
+<file path="src/hook/hook.controller.ts">
+import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
+import { HookService } from './hook.service';
+import { ApiKeyGuard } from '../common/guards/api-key.guard';
+
+@Controller('hook')
+@UseGuards(ApiKeyGuard)
+export class HookController {
+  constructor(private readonly hookService: HookService) {}
+
+  /**
+   * Check project lock status
+   * Used by check-platform.sh to determine if dev can start session
+   */
+  @Get('status/:projectId')
+  getStatus(@Param('projectId') projectId: string) {
+    return this.hookService.getStatus(projectId);
+  }
+
+  /**
+   * Get docs hash for quick comparison
+   * Used by check-platform.sh to determine if sync needed
+   */
+  @Get('docs/:projectId')
+  getDocsHash(@Param('projectId') projectId: string) {
+    return this.hookService.getDocsHash(projectId);
+  }
+
+  /**
+   * Sync docs from platform
+   * Returns all docs content for local .docs/ folder
+   */
+  @Post('sync/:projectId')
+  syncDocs(@Param('projectId') projectId: string) {
+    return this.hookService.syncDocs(projectId);
+  }
+}
+</file>
+
+<file path="src/hook/hook.module.ts">
+import { Module } from '@nestjs/common';
+import { HookController } from './hook.controller';
+import { HookService } from './hook.service';
+import { DocsModule } from '../docs/docs.module';
+import { LockModule } from '../lock/lock.module';
+
+@Module({
+  imports: [DocsModule, LockModule],
+  controllers: [HookController],
+  providers: [HookService],
+})
+export class HookModule {}
+</file>
+
+<file path="src/hook/hook.service.ts">
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Doc } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { DocsService } from '../docs/docs.service';
+import { LockService } from '../lock/lock.service';
+
+export interface HookStatusResponse {
+  locked: boolean;
+  lockedBy?: string;
+  lockedAt?: string;
+  expiresAt?: string;
+}
+
+export interface HookDocsHashResponse {
+  hash: string;
+  docsCount: number;
+}
+
+export interface HookSyncResponse {
+  docs: Array<{
+    fileName: string;
+    content: string;
+    hash: string;
+  }>;
+  hash: string;
+}
+
+@Injectable()
+export class HookService {
+  constructor(
+    private prisma: PrismaService,
+    private docsService: DocsService,
+    private lockService: LockService,
+  ) {}
+
+  async getStatus(projectId: string): Promise<HookStatusResponse> {
+    // Verify project exists
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    const lock = await this.lockService.getLock(projectId);
+
+    if (!lock) {
+      return { locked: false };
+    }
+
+    return {
+      locked: true,
+      lockedBy: lock.lockedBy,
+      lockedAt: lock.lockedAt.toISOString(),
+      expiresAt: lock.expiresAt?.toISOString(),
+    };
+  }
+
+  async getDocsHash(projectId: string): Promise<HookDocsHashResponse> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    const docs = await this.docsService.findAllByProject(projectId);
+    const hash = await this.docsService.getDocsHash(projectId);
+
+    return {
+      hash,
+      docsCount: docs.length,
+    };
+  }
+
+  async syncDocs(projectId: string): Promise<HookSyncResponse> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    // First sync from GitHub to ensure we have latest
+    await this.docsService.syncFromGitHub(projectId);
+
+    // Get all docs
+    const docs = await this.docsService.findAllByProject(projectId);
+    const hash = await this.docsService.getDocsHash(projectId);
+
+    return {
+      docs: docs.map((doc: Doc) => ({
+        fileName: doc.fileName,
+        content: doc.content,
+        hash: doc.hash,
+      })),
+      hash,
+    };
+  }
+}
+</file>
+
+<file path="src/lock/dto/acquire-lock.dto.ts">
+import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+export class AcquireLockDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Transform(({ value }) => value?.trim())
+  lockedBy!: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(500)
+  @Transform(({ value }) => value?.trim())
+  reason?: string;
+}
+</file>
+
+<file path="src/lock/dto/extend-lock.dto.ts">
+import { IsNumber, IsOptional, Min, Max } from 'class-validator';
+
+export class ExtendLockDto {
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  @Max(120) // Max 2 hours extension
+  minutes?: number;
+}
+</file>
+
+<file path="src/lock/lock.controller.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { LockController } from './lock.controller';
+import { LockService } from './lock.service';
+import { AcquireLockDto } from './dto/acquire-lock.dto';
+import { ExtendLockDto } from './dto/extend-lock.dto';
+
+describe('LockController', () => {
+  let controller: LockController;
+  let service: LockService;
+
+  const mockLock = {
+    id: 'lock-123',
+    projectId: 'project-123',
+    lockedBy: 'user@example.com',
+    reason: 'Editing docs',
+    lockedAt: new Date(),
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+  };
+
+  const mockLockService = {
+    getLock: jest.fn(),
+    acquireLock: jest.fn(),
+    releaseLock: jest.fn(),
+    extendLock: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [LockController],
+      providers: [{ provide: LockService, useValue: mockLockService }],
+    }).compile();
+
+    controller = module.get<LockController>(LockController);
+    service = module.get<LockService>(LockService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('getLock', () => {
+    it('should return lock status', async () => {
+      mockLockService.getLock.mockResolvedValue(mockLock);
+
+      const result = await controller.getLock('project-123');
+
+      expect(service.getLock).toHaveBeenCalledWith('project-123');
+      expect(result).toEqual(mockLock);
+    });
+
+    it('should return null when no lock exists', async () => {
+      mockLockService.getLock.mockResolvedValue(null);
+
+      const result = await controller.getLock('project-123');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('acquireLock', () => {
+    it('should acquire a lock', async () => {
+      const dto: AcquireLockDto = { lockedBy: 'user@example.com', reason: 'Editing docs' };
+      mockLockService.acquireLock.mockResolvedValue(mockLock);
+
+      const result = await controller.acquireLock('project-123', dto);
+
+      expect(service.acquireLock).toHaveBeenCalledWith(
+        'project-123',
+        'user@example.com',
+        'Editing docs',
+      );
+      expect(result).toEqual(mockLock);
+    });
+
+    it('should acquire a lock without reason', async () => {
+      const dto: AcquireLockDto = { lockedBy: 'user@example.com' };
+      mockLockService.acquireLock.mockResolvedValue({
+        ...mockLock,
+        reason: undefined,
+      });
+
+      const result = await controller.acquireLock('project-123', dto);
+
+      expect(service.acquireLock).toHaveBeenCalledWith(
+        'project-123',
+        'user@example.com',
+        undefined,
+      );
+      expect(result.lockedBy).toBe('user@example.com');
+    });
+  });
+
+  describe('releaseLock', () => {
+    it('should release a lock', async () => {
+      mockLockService.releaseLock.mockResolvedValue({ released: true });
+
+      const result = await controller.releaseLock('project-123');
+
+      expect(service.releaseLock).toHaveBeenCalledWith('project-123');
+      expect(result).toEqual({ released: true });
+    });
+  });
+
+  describe('extendLock', () => {
+    it('should extend a lock with default TTL', async () => {
+      const dto: ExtendLockDto = {};
+      const extendedLock = {
+        ...mockLock,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      };
+      mockLockService.extendLock.mockResolvedValue(extendedLock);
+
+      const result = await controller.extendLock('project-123', dto);
+
+      expect(service.extendLock).toHaveBeenCalledWith('project-123', undefined);
+      expect(result.expiresAt).toBeDefined();
+    });
+
+    it('should extend a lock with custom TTL', async () => {
+      const dto: ExtendLockDto = { minutes: 60 };
+      const extendedLock = {
+        ...mockLock,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      };
+      mockLockService.extendLock.mockResolvedValue(extendedLock);
+
+      const result = await controller.extendLock('project-123', dto);
+
+      expect(service.extendLock).toHaveBeenCalledWith('project-123', 60);
+      expect(result).toEqual(extendedLock);
+    });
+  });
+});
+</file>
+
+<file path="src/lock/lock.controller.ts">
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+} from '@nestjs/common';
+import { LockService } from './lock.service';
+import { AcquireLockDto } from './dto/acquire-lock.dto';
+import { ExtendLockDto } from './dto/extend-lock.dto';
+
+@Controller('projects/:projectId/lock')
+export class LockController {
+  constructor(private readonly lockService: LockService) {}
+
+  @Get()
+  getLock(@Param('projectId') projectId: string) {
+    return this.lockService.getLock(projectId);
+  }
+
+  @Post()
+  acquireLock(
+    @Param('projectId') projectId: string,
+    @Body() dto: AcquireLockDto,
+  ) {
+    return this.lockService.acquireLock(projectId, dto.lockedBy, dto.reason);
+  }
+
+  @Delete()
+  releaseLock(@Param('projectId') projectId: string) {
+    return this.lockService.releaseLock(projectId);
+  }
+
+  @Post('extend')
+  extendLock(
+    @Param('projectId') projectId: string,
+    @Body() dto: ExtendLockDto,
+  ) {
+    return this.lockService.extendLock(projectId, dto.minutes);
+  }
+}
+</file>
+
+<file path="src/lock/lock.module.ts">
+import { Module } from '@nestjs/common';
+import { LockController } from './lock.controller';
+import { LockService } from './lock.service';
+
+@Module({
+  controllers: [LockController],
+  providers: [LockService],
+  exports: [LockService],
+})
+export class LockModule {}
+</file>
+
+<file path="src/lock/lock.service.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { LockService } from './lock.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsGateway } from '../websocket/websocket.gateway';
+import { ConflictException, NotFoundException } from '@nestjs/common';
+
+describe('LockService', () => {
+  let service: LockService;
+  let prisma: PrismaService;
+
+  const mockProject = {
+    id: 'project-123',
+    name: 'Test Project',
+  };
+
+  const mockLock = {
+    id: 'lock-123',
+    projectId: 'project-123',
+    lockedBy: 'user@example.com',
+    reason: 'Editing docs',
+    lockedAt: new Date(),
+    expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
+  };
+
+  const mockPrismaService = {
+    lock: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+      update: jest.fn(),
+    },
+    project: {
+      findUnique: jest.fn(),
+    },
+    $transaction: jest.fn(),
+  };
+
+  const mockNotificationsGateway = {
+    notifyLockAcquired: jest.fn(),
+    notifyLockReleased: jest.fn(),
+    notifyDocUpdated: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        LockService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: NotificationsGateway, useValue: mockNotificationsGateway },
+      ],
+    }).compile();
+
+    service = module.get<LockService>(LockService);
+    prisma = module.get<PrismaService>(PrismaService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('getLock', () => {
+    it('should return active lock', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(mockLock);
+
+      const result = await service.getLock('project-123');
+
+      expect(prisma.lock.findUnique).toHaveBeenCalledWith({
+        where: { projectId: 'project-123' },
+      });
+      expect(result).toEqual(mockLock);
+    });
+
+    it('should return null when no lock exists', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(null);
+
+      const result = await service.getLock('project-123');
+
+      expect(result).toBeNull();
+    });
+
+    it('should release and return null for expired lock', async () => {
+      const expiredLock = {
+        ...mockLock,
+        expiresAt: new Date(Date.now() - 1000), // Expired 1 second ago
+      };
+
+      mockPrismaService.lock.findUnique.mockResolvedValue(expiredLock);
+      mockPrismaService.lock.delete.mockResolvedValue(expiredLock);
+
+      const result = await service.getLock('project-123');
+
+      expect(prisma.lock.delete).toHaveBeenCalledWith({
+        where: { projectId: 'project-123' },
+      });
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('acquireLock', () => {
+    it('should acquire lock when no existing lock', async () => {
+      // Mock transaction to execute the callback
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockResolvedValue(mockLock),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(mockProject),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await service.acquireLock(
+        'project-123',
+        'user@example.com',
+        'Editing docs',
+      );
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+      expect(result).toEqual(mockLock);
+    });
+
+    it('should throw ConflictException when lock already exists', async () => {
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(mockLock),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      await expect(
+        service.acquireLock('project-123', 'another@example.com'),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should throw NotFoundException when project not found', async () => {
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(null),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(null),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      await expect(
+        service.acquireLock('non-existent', 'user@example.com'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should acquire lock without reason', async () => {
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockResolvedValue({ ...mockLock, reason: undefined }),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(mockProject),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await service.acquireLock('project-123', 'user@example.com');
+
+      expect(result.lockedBy).toBe('user@example.com');
+    });
+
+    it('should replace expired lock', async () => {
+      const expiredLock = { ...mockLock, expiresAt: new Date(Date.now() - 1000) };
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {
+          lock: {
+            findUnique: jest.fn().mockResolvedValue(expiredLock),
+            delete: jest.fn().mockResolvedValue(expiredLock),
+            create: jest.fn().mockResolvedValue(mockLock),
+          },
+          project: {
+            findUnique: jest.fn().mockResolvedValue(mockProject),
+          },
+        };
+        return callback(mockTx);
+      });
+
+      const result = await service.acquireLock('project-123', 'user@example.com');
+
+      expect(result).toEqual(mockLock);
+    });
+  });
+
+  describe('releaseLock', () => {
+    it('should release existing lock', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(mockLock);
+      mockPrismaService.lock.delete.mockResolvedValue(mockLock);
+
+      const result = await service.releaseLock('project-123');
+
+      expect(prisma.lock.delete).toHaveBeenCalledWith({
+        where: { projectId: 'project-123' },
+      });
+      expect(result).toEqual({ released: true });
+    });
+
+    it('should return false when no lock exists', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(null);
+
+      const result = await service.releaseLock('project-123');
+
+      expect(prisma.lock.delete).not.toHaveBeenCalled();
+      expect(result).toEqual({ released: false, message: 'No lock exists' });
+    });
+  });
+
+  describe('extendLock', () => {
+    it('should extend lock with default TTL', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(mockLock);
+      mockPrismaService.lock.update.mockResolvedValue({
+        ...mockLock,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      });
+
+      const result = await service.extendLock('project-123');
+
+      expect(prisma.lock.update).toHaveBeenCalledWith({
+        where: { projectId: 'project-123' },
+        data: { expiresAt: expect.any(Date) },
+      });
+      expect(result.expiresAt).toBeDefined();
+    });
+
+    it('should extend lock with custom TTL', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(mockLock);
+      mockPrismaService.lock.update.mockResolvedValue({
+        ...mockLock,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+
+      await service.extendLock('project-123', 60);
+
+      expect(prisma.lock.update).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when no active lock', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(null);
+
+      await expect(service.extendLock('project-123')).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.extendLock('project-123')).rejects.toThrow(
+        'No active lock found',
+      );
+    });
+  });
+
+  describe('isLocked', () => {
+    it('should return true when lock exists', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(mockLock);
+
+      const result = await service.isLocked('project-123');
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when no lock exists', async () => {
+      mockPrismaService.lock.findUnique.mockResolvedValue(null);
+
+      const result = await service.isLocked('project-123');
+
+      expect(result).toBe(false);
+    });
+  });
+});
+</file>
+
+<file path="src/lock/lock.service.ts">
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsGateway } from '../websocket/websocket.gateway';
+
+const DEFAULT_LOCK_TTL_MINUTES = 30;
+
+@Injectable()
+export class LockService {
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsGateway,
+  ) {}
+
+  async getLock(projectId: string) {
+    const lock = await this.prisma.lock.findUnique({
+      where: { projectId },
+    });
+
+    if (lock?.expiresAt && lock.expiresAt < new Date()) {
+      await this.releaseLock(projectId);
+      return null;
+    }
+
+    return lock;
+  }
+
+  async acquireLock(projectId: string, lockedBy: string, reason?: string) {
+    // Use transaction with serializable isolation to prevent race conditions
+    const lock = await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Check for existing lock within transaction
+        const existingLock = await tx.lock.findUnique({
+          where: { projectId },
+        });
+
+        if (existingLock) {
+          // Check if expired
+          if (existingLock.expiresAt && existingLock.expiresAt < new Date()) {
+            await tx.lock.delete({ where: { projectId } });
+          } else {
+            throw new ConflictException({
+              message: 'Project is already locked',
+              lockedBy: existingLock.lockedBy,
+              lockedAt: existingLock.lockedAt,
+            });
+          }
+        }
+
+        // Verify project exists
+        const project = await tx.project.findUnique({
+          where: { id: projectId },
+        });
+        if (!project) {
+          throw new NotFoundException(`Project ${projectId} not found`);
+        }
+
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + DEFAULT_LOCK_TTL_MINUTES);
+
+        return tx.lock.create({
+          data: {
+            projectId,
+            lockedBy,
+            reason,
+            expiresAt,
+          },
+        });
+      },
+      {
+        isolationLevel: 'Serializable',
+        timeout: 5000,
+      },
+    );
+
+    // Broadcast lock acquired event
+    this.notifications.notifyLockAcquired(
+      projectId,
+      lockedBy,
+      lock.lockedAt.toISOString(),
+    );
+
+    return lock;
+  }
+
+  async releaseLock(projectId: string) {
+    const lock = await this.prisma.lock.findUnique({
+      where: { projectId },
+    });
+
+    if (!lock) {
+      return { released: false, message: 'No lock exists' };
+    }
+
+    await this.prisma.lock.delete({
+      where: { projectId },
+    });
+
+    // Broadcast lock released event
+    this.notifications.notifyLockReleased(projectId);
+
+    return { released: true };
+  }
+
+  async extendLock(projectId: string, minutes = DEFAULT_LOCK_TTL_MINUTES) {
+    const lock = await this.getLock(projectId);
+    if (!lock) {
+      throw new NotFoundException('No active lock found');
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + minutes);
+
+    return this.prisma.lock.update({
+      where: { projectId },
+      data: { expiresAt },
+    });
+  }
+
+  async isLocked(projectId: string): Promise<boolean> {
+    const lock = await this.getLock(projectId);
+    return lock !== null;
+  }
+}
+</file>
+
+<file path="src/prisma/prisma.module.ts">
+import { Global, Module } from '@nestjs/common';
+import { PrismaService } from './prisma.service';
+
+@Global()
+@Module({
+  providers: [PrismaService],
+  exports: [PrismaService],
+})
+export class PrismaModule {}
+</file>
+
+<file path="src/prisma/prisma.service.ts">
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+
+@Injectable()
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PrismaService.name);
+
+  constructor() {
+    super({
+      log: process.env.NODE_ENV === 'development'
+        ? ['error', 'warn']
+        : ['error'],
+    });
+  }
+
+  async onModuleInit() {
+    try {
+      await this.$connect();
+      this.logger.log('Database connection established');
+    } catch (error) {
+      this.logger.error('Failed to connect to database', error);
+      throw error;
+    }
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
+  }
+
+  /**
+   * Clean database for E2E testing - deletes all data in correct order
+   * DANGER: Only use in test environment
+   */
+  async cleanDatabase() {
+    // Production guard - prevent accidental data wipe
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('cleanDatabase() cannot be called in production');
+    }
+
+    // Delete in order respecting foreign key constraints
+    await this.lock.deleteMany();
+    await this.apiKey.deleteMany();
+    await this.doc.deleteMany();
+    await this.project.deleteMany();
+  }
+}
+</file>
+
+<file path="src/projects/dto/create-project.dto.ts">
+import { IsString, IsNotEmpty, MaxLength, IsUrl, IsOptional } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+export class CreateProjectDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Transform(({ value }) => value.trim())
+  name!: string;
+
+  @IsUrl()
+  @IsNotEmpty()
+  repoUrl!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  token!: string;
+
+  @IsString()
+  @IsOptional()
+  branch?: string = 'main';
+
+  @IsString()
+  @IsOptional()
+  docsPath?: string = 'docs';
+}
+</file>
+
+<file path="src/projects/dto/update-project.dto.ts">
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateProjectDto } from './create-project.dto';
+
+export class UpdateProjectDto extends PartialType(CreateProjectDto) {}
+</file>
+
+<file path="src/projects/projects.controller.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { ProjectsController } from './projects.controller';
+import { ProjectsService } from './projects.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+
+describe('ProjectsController', () => {
+  let controller: ProjectsController;
+  let service: ProjectsService;
+
+  const mockProject = {
+    id: 'project-123',
+    name: 'Test Project',
+    repoUrl: 'https://github.com/test/repo',
+    token: 'ghp_test_token',
+    branch: 'main',
+    docsPath: 'docs',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockProjectsService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+    generateApiKey: jest.fn(),
+    revokeApiKey: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [ProjectsController],
+      providers: [
+        { provide: ProjectsService, useValue: mockProjectsService },
+      ],
+    }).compile();
+
+    controller = module.get<ProjectsController>(ProjectsController);
+    service = module.get<ProjectsService>(ProjectsService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create a project', async () => {
+      const dto: CreateProjectDto = {
+        name: 'New Project',
+        repoUrl: 'https://github.com/test/new-repo',
+        token: 'ghp_new_token',
+      };
+
+      mockProjectsService.create.mockResolvedValue({ ...mockProject, ...dto });
+
+      const result = await controller.create(dto);
+
+      expect(service.create).toHaveBeenCalledWith(dto);
+      expect(result.name).toBe(dto.name);
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return all projects', async () => {
+      const projects = [mockProject, { ...mockProject, id: 'project-456' }];
+      mockProjectsService.findAll.mockResolvedValue(projects);
+
+      const result = await controller.findAll();
+
+      expect(service.findAll).toHaveBeenCalled();
+      expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a project by id', async () => {
+      mockProjectsService.findOne.mockResolvedValue(mockProject);
+
+      const result = await controller.findOne('project-123');
+
+      expect(service.findOne).toHaveBeenCalledWith('project-123');
+      expect(result.id).toBe('project-123');
+    });
+  });
+
+  describe('update', () => {
+    it('should update a project', async () => {
+      const dto: UpdateProjectDto = { name: 'Updated Name' };
+      mockProjectsService.update.mockResolvedValue({
+        ...mockProject,
+        name: 'Updated Name',
+      });
+
+      const result = await controller.update('project-123', dto);
+
+      expect(service.update).toHaveBeenCalledWith('project-123', dto);
+      expect(result.name).toBe('Updated Name');
+    });
+  });
+
+  describe('remove', () => {
+    it('should delete a project', async () => {
+      mockProjectsService.remove.mockResolvedValue(mockProject);
+
+      const result = await controller.remove('project-123');
+
+      expect(service.remove).toHaveBeenCalledWith('project-123');
+      expect(result.id).toBe('project-123');
+    });
+  });
+
+  describe('generateApiKey', () => {
+    it('should generate an API key', async () => {
+      const mockApiKey = {
+        id: 'key-123',
+        projectId: 'project-123',
+        key: 'sk_test_key',
+        name: 'Test Key',
+      };
+
+      mockProjectsService.generateApiKey.mockResolvedValue(mockApiKey);
+
+      const result = await controller.generateApiKey('project-123', 'Test Key');
+
+      expect(service.generateApiKey).toHaveBeenCalledWith(
+        'project-123',
+        'Test Key',
+      );
+      expect(result.name).toBe('Test Key');
+    });
+  });
+
+  describe('revokeApiKey', () => {
+    it('should revoke an API key', async () => {
+      const revokedKey = { id: 'key-123', isActive: false };
+      mockProjectsService.revokeApiKey.mockResolvedValue(revokedKey);
+
+      const result = await controller.revokeApiKey('key-123');
+
+      expect(service.revokeApiKey).toHaveBeenCalledWith('key-123');
+      expect(result.isActive).toBe(false);
+    });
+  });
+});
+</file>
+
+<file path="src/projects/projects.controller.ts">
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+} from '@nestjs/common';
+import { ProjectsService } from './projects.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+
+@Controller('projects')
+export class ProjectsController {
+  constructor(private readonly projectsService: ProjectsService) {}
+
+  @Post()
+  create(@Body() dto: CreateProjectDto) {
+    return this.projectsService.create(dto);
+  }
+
+  @Get()
+  findAll() {
+    return this.projectsService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.projectsService.findOne(id);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
+    return this.projectsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.projectsService.remove(id);
+  }
+
+  @Post(':id/api-keys')
+  generateApiKey(
+    @Param('id') projectId: string,
+    @Body('name') name: string,
+  ) {
+    return this.projectsService.generateApiKey(projectId, name);
+  }
+
+  @Delete('api-keys/:keyId')
+  revokeApiKey(@Param('keyId') keyId: string) {
+    return this.projectsService.revokeApiKey(keyId);
+  }
+}
+</file>
+
+<file path="src/projects/projects.module.ts">
+import { Module } from '@nestjs/common';
+import { ProjectsController } from './projects.controller';
+import { ProjectsService } from './projects.service';
+
+@Module({
+  controllers: [ProjectsController],
+  providers: [ProjectsService],
+  exports: [ProjectsService],
+})
+export class ProjectsModule {}
+</file>
+
+<file path="src/projects/projects.service.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { ProjectsService } from './projects.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../common/services/crypto.service';
+import { NotFoundException } from '@nestjs/common';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+
+describe('ProjectsService', () => {
+  let service: ProjectsService;
+  let prisma: PrismaService;
+
+  const mockProject = {
+    id: 'project-123',
+    name: 'Test Project',
+    repoUrl: 'https://github.com/test/repo',
+    token: 'encrypted_token',
+    branch: 'main',
+    docsPath: 'docs',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const mockPrismaService = {
+    project: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    apiKey: {
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+  };
+
+  const mockCryptoService = {
+    encrypt: jest.fn().mockReturnValue('encrypted_token'),
+    decrypt: jest.fn().mockReturnValue('ghp_test_token'),
+    computeHash: jest.fn().mockReturnValue('hash123'),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        ProjectsService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: CryptoService, useValue: mockCryptoService },
+      ],
+    }).compile();
+
+    service = module.get<ProjectsService>(ProjectsService);
+    prisma = module.get<PrismaService>(PrismaService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create a project with all fields', async () => {
+      const dto: CreateProjectDto = {
+        name: 'New Project',
+        repoUrl: 'https://github.com/test/new-repo',
+        token: 'ghp_new_token',
+        branch: 'develop',
+        docsPath: 'documentation',
+      };
+
+      mockPrismaService.project.create.mockResolvedValue({
+        ...mockProject,
+        ...dto,
+      });
+
+      const result = await service.create(dto);
+
+      expect(prisma.project.create).toHaveBeenCalledWith({
+        data: {
+          name: dto.name,
+          repoUrl: dto.repoUrl,
+          token: 'encrypted_token',
+          branch: dto.branch,
+          docsPath: dto.docsPath,
+        },
+      });
+      expect(result.name).toBe(dto.name);
+    });
+
+    it('should create a project with default branch and docsPath', async () => {
+      const dto: CreateProjectDto = {
+        name: 'New Project',
+        repoUrl: 'https://github.com/test/new-repo',
+        token: 'ghp_new_token',
+      };
+
+      mockPrismaService.project.create.mockResolvedValue({
+        ...mockProject,
+        name: dto.name,
+        repoUrl: dto.repoUrl,
+        token: dto.token,
+      });
+
+      await service.create(dto);
+
+      expect(prisma.project.create).toHaveBeenCalledWith({
+        data: {
+          name: dto.name,
+          repoUrl: dto.repoUrl,
+          token: 'encrypted_token',
+          branch: 'main',
+          docsPath: 'docs',
+        },
+      });
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return all projects with locks and counts', async () => {
+      const projects = [
+        { ...mockProject, locks: [], _count: { docs: 5, apiKeys: 2 } },
+        { ...mockProject, id: 'project-456', locks: [], _count: { docs: 3, apiKeys: 1 } },
+      ];
+
+      mockPrismaService.project.findMany.mockResolvedValue(projects);
+
+      const result = await service.findAll();
+
+      expect(prisma.project.findMany).toHaveBeenCalledWith({
+        include: {
+          locks: true,
+          _count: { select: { docs: true, apiKeys: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array when no projects exist', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a project by id', async () => {
+      const projectWithRelations = {
+        ...mockProject,
+        docs: [],
+        locks: [],
+        apiKeys: [],
+      };
+
+      mockPrismaService.project.findUnique.mockResolvedValue(projectWithRelations);
+
+      const result = await service.findOne('project-123');
+
+      expect(prisma.project.findUnique).toHaveBeenCalledWith({
+        where: { id: 'project-123' },
+        include: {
+          docs: true,
+          locks: true,
+          apiKeys: { where: { isActive: true } },
+        },
+      });
+      expect(result.id).toBe('project-123');
+    });
+
+    it('should throw NotFoundException when project not found', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        'Project non-existent not found',
+      );
+    });
+  });
+
+  describe('update', () => {
+    it('should update a project', async () => {
+      const dto: UpdateProjectDto = { name: 'Updated Name' };
+      const updatedProject = { ...mockProject, name: 'Updated Name' };
+
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        docs: [],
+        locks: [],
+        apiKeys: [],
+      });
+      mockPrismaService.project.update.mockResolvedValue(updatedProject);
+
+      const result = await service.update('project-123', dto);
+
+      expect(prisma.project.update).toHaveBeenCalledWith({
+        where: { id: 'project-123' },
+        data: dto,
+      });
+      expect(result.name).toBe('Updated Name');
+    });
+
+    it('should throw NotFoundException when updating non-existent project', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update('non-existent', { name: 'New Name' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('remove', () => {
+    it('should delete a project', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        docs: [],
+        locks: [],
+        apiKeys: [],
+      });
+      mockPrismaService.project.delete.mockResolvedValue(mockProject);
+
+      const result = await service.remove('project-123');
+
+      expect(prisma.project.delete).toHaveBeenCalledWith({
+        where: { id: 'project-123' },
+      });
+      expect(result.id).toBe('project-123');
+    });
+
+    it('should throw NotFoundException when deleting non-existent project', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('generateApiKey', () => {
+    it('should generate an API key for a project', async () => {
+      const mockApiKey = {
+        id: 'key-123',
+        projectId: 'project-123',
+        key: 'sk_test_key',
+        name: 'Test Key',
+        isActive: true,
+        createdAt: new Date(),
+      };
+
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        docs: [],
+        locks: [],
+        apiKeys: [],
+      });
+      mockPrismaService.apiKey.create.mockResolvedValue(mockApiKey);
+
+      const result = await service.generateApiKey('project-123', 'Test Key');
+
+      expect(prisma.apiKey.create).toHaveBeenCalledWith({
+        data: {
+          projectId: 'project-123',
+          key: expect.stringMatching(/^sk_[a-f0-9]{64}$/),
+          name: 'Test Key',
+        },
+      });
+      expect(result.name).toBe('Test Key');
+    });
+
+    it('should throw NotFoundException when project not found', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.generateApiKey('non-existent', 'Test Key'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('revokeApiKey', () => {
+    it('should revoke an API key', async () => {
+      const revokedKey = {
+        id: 'key-123',
+        isActive: false,
+      };
+
+      mockPrismaService.apiKey.update.mockResolvedValue(revokedKey);
+
+      const result = await service.revokeApiKey('key-123');
+
+      expect(prisma.apiKey.update).toHaveBeenCalledWith({
+        where: { id: 'key-123' },
+        data: { isActive: false },
+      });
+      expect(result.isActive).toBe(false);
+    });
+  });
+});
+</file>
+
+<file path="src/projects/projects.service.ts">
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../common/services/crypto.service';
+import { CreateProjectDto } from './dto/create-project.dto';
+import { UpdateProjectDto } from './dto/update-project.dto';
+import { randomBytes } from 'crypto';
+
+@Injectable()
+export class ProjectsService {
+  constructor(
+    private prisma: PrismaService,
+    private crypto: CryptoService,
+  ) {}
+
+  async create(dto: CreateProjectDto) {
+    const encryptedToken = this.crypto.encrypt(dto.token);
+    return this.prisma.project.create({
+      data: {
+        name: dto.name,
+        repoUrl: dto.repoUrl,
+        token: encryptedToken,
+        branch: dto.branch || 'main',
+        docsPath: dto.docsPath || 'docs',
+      },
+    });
+  }
+
+  async findAll() {
+    const projects = await this.prisma.project.findMany({
+      include: {
+        locks: true,
+        _count: { select: { docs: true, apiKeys: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    // Exclude token from response for security
+    return projects.map(({ token, ...rest }) => rest);
+  }
+
+  async findOne(id: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id },
+      include: {
+        docs: true,
+        locks: true,
+        apiKeys: { where: { isActive: true } },
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${id} not found`);
+    }
+
+    // Exclude token from response for security
+    const { token, ...rest } = project;
+    return rest;
+  }
+
+  // Internal method to get project with token for service use
+  private async findOneWithToken(id: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${id} not found`);
+    }
+
+    return project;
+  }
+
+  async update(id: string, dto: UpdateProjectDto) {
+    await this.findOne(id);
+    return this.prisma.project.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id);
+    return this.prisma.project.delete({ where: { id } });
+  }
+
+  async generateApiKey(projectId: string, name: string) {
+    await this.findOne(projectId);
+    const key = `sk_${randomBytes(32).toString('hex')}`;
+
+    return this.prisma.apiKey.create({
+      data: {
+        projectId,
+        key,
+        name,
+      },
+    });
+  }
+
+  async revokeApiKey(keyId: string) {
+    return this.prisma.apiKey.update({
+      where: { id: keyId },
+      data: { isActive: false },
+    });
+  }
+
+  async getDecryptedToken(projectId: string): Promise<string> {
+    const project = await this.findOneWithToken(projectId);
+    return this.crypto.decrypt(project.token);
+  }
+}
+</file>
+
+<file path="src/websocket/websocket.gateway.ts">
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
+  WsException,
+} from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
+import { PrismaService } from '../prisma/prisma.service';
+
+interface JoinMessage {
+  projectId: string;
+}
+
+interface LockEvent {
+  type: 'lock:acquired' | 'lock:released';
+  projectId: string;
+  lockedBy?: string;
+  lockedAt?: string;
+}
+
+interface DocEvent {
+  type: 'doc:updated';
+  projectId: string;
+  docId: string;
+  hash: string;
+}
+
+// CUID pattern validation
+const CUID_PATTERN = /^c[a-z0-9]{24}$/;
+
+function isValidCuid(id: string): boolean {
+  return CUID_PATTERN.test(id);
+}
+
+@WebSocketGateway({
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  },
+})
+export class NotificationsGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
+  private readonly logger = new Logger('WebSocketGateway');
+
+  constructor(private prisma: PrismaService) {}
+
+  @WebSocketServer()
+  server!: Server;
+
+  async handleConnection(client: Socket) {
+    try {
+      // Allow unauthenticated connections in development for web UI
+      const isDev = process.env.NODE_ENV !== 'production';
+
+      // Validate API key from handshake auth or query
+      const apiKey =
+        client.handshake.auth?.apiKey ||
+        client.handshake.headers['x-api-key'] ||
+        client.handshake.query?.apiKey;
+
+      if (!apiKey) {
+        if (isDev) {
+          // Allow unauthenticated connections in dev mode for web UI
+          client.data.authenticated = false;
+          client.data.devMode = true;
+          this.logger.log(`Client ${client.id} connected (dev mode, no auth)`);
+          return;
+        }
+        this.logger.warn(`Client ${client.id} rejected: no API key`);
+        client.emit('error', { message: 'API key required' });
+        client.disconnect();
+        return;
+      }
+
+      // Validate API key
+      const key = await this.prisma.apiKey.findUnique({
+        where: { key: String(apiKey) },
+        include: { project: true },
+      });
+
+      if (!key || !key.isActive) {
+        this.logger.warn(`Client ${client.id} rejected: invalid API key`);
+        client.emit('error', { message: 'Invalid or inactive API key' });
+        client.disconnect();
+        return;
+      }
+
+      // Store project info in socket data
+      client.data.projectId = key.projectId;
+      client.data.authenticated = true;
+
+      this.logger.log(`Client connected: ${client.id}`);
+    } catch {
+      this.logger.error(`Connection error for ${client.id}`);
+      client.disconnect();
+    }
+  }
+
+  handleDisconnect(client: Socket) {
+    this.logger.log(`Client disconnected: ${client.id}`);
+  }
+
+  @SubscribeMessage('join')
+  handleJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: JoinMessage,
+  ) {
+    // In dev mode, allow joining any project room
+    if (client.data.devMode) {
+      if (!data.projectId || !isValidCuid(data.projectId)) {
+        throw new WsException('Invalid projectId format');
+      }
+      const room = `project:${data.projectId}`;
+      client.join(room);
+      this.logger.log(`Client ${client.id} joined room ${room} (dev mode)`);
+      return { success: true, room };
+    }
+
+    // Validate authentication
+    if (!client.data.authenticated) {
+      throw new WsException('Not authenticated');
+    }
+
+    // Validate projectId format
+    if (!data.projectId || !isValidCuid(data.projectId)) {
+      throw new WsException('Invalid projectId format');
+    }
+
+    // Only allow joining rooms for authenticated project
+    if (client.data.projectId !== data.projectId) {
+      throw new WsException('Cannot join room for different project');
+    }
+
+    const room = `project:${data.projectId}`;
+    client.join(room);
+    this.logger.log(`Client ${client.id} joined room ${room}`);
+    return { success: true, room };
+  }
+
+  @SubscribeMessage('leave')
+  handleLeave(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: JoinMessage,
+  ) {
+    // Validate projectId format
+    if (!data.projectId || !isValidCuid(data.projectId)) {
+      throw new WsException('Invalid projectId format');
+    }
+
+    const room = `project:${data.projectId}`;
+    client.leave(room);
+    this.logger.log(`Client ${client.id} left room ${room}`);
+    return { success: true };
+  }
+
+  /**
+   * Broadcast lock acquired event to all clients in project room
+   */
+  notifyLockAcquired(projectId: string, lockedBy: string, lockedAt: string) {
+    const event: LockEvent = {
+      type: 'lock:acquired',
+      projectId,
+      lockedBy,
+      lockedAt,
+    };
+    this.server.to(`project:${projectId}`).emit('lock:acquired', event);
+    this.logger.log(`Lock acquired broadcast for project ${projectId}`);
+  }
+
+  /**
+   * Broadcast lock released event to all clients in project room
+   */
+  notifyLockReleased(projectId: string) {
+    const event: LockEvent = {
+      type: 'lock:released',
+      projectId,
+    };
+    this.server.to(`project:${projectId}`).emit('lock:released', event);
+    this.logger.log(`Lock released broadcast for project ${projectId}`);
+  }
+
+  /**
+   * Broadcast doc updated event to all clients in project room
+   */
+  notifyDocUpdated(projectId: string, docId: string, hash: string) {
+    const event: DocEvent = {
+      type: 'doc:updated',
+      projectId,
+      docId,
+      hash,
+    };
+    this.server.to(`project:${projectId}`).emit('doc:updated', event);
+    this.logger.log(`Doc updated broadcast for project ${projectId}`);
+  }
+}
+</file>
+
+<file path="src/websocket/websocket.module.ts">
+import { Module, Global } from '@nestjs/common';
+import { NotificationsGateway } from './websocket.gateway';
+
+@Global()
+@Module({
+  providers: [NotificationsGateway],
+  exports: [NotificationsGateway],
+})
+export class WebSocketModule {}
+</file>
+
+<file path="src/app.module.ts">
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { PrismaModule } from './prisma/prisma.module';
+import { CryptoModule } from './common/services/crypto.module';
+import { ProjectsModule } from './projects/projects.module';
+import { DocsModule } from './docs/docs.module';
+import { LockModule } from './lock/lock.module';
+import { GitHubModule } from './github/github.module';
+import { WebSocketModule } from './websocket/websocket.module';
+import { HookModule } from './hook/hook.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+    ]),
+    PrismaModule,
+    CryptoModule,
+    WebSocketModule,
+    ProjectsModule,
+    DocsModule,
+    LockModule,
+    GitHubModule,
+    HookModule,
+  ],
+})
+export class AppModule {}
+</file>
+
+<file path="src/main.ts">
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { AppModule } from './app.module';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  });
+
+  app.setGlobalPrefix('api');
+
+  const port = process.env.PORT || 3001;
+  await app.listen(port);
+  logger.log(`Application running on port ${port}`);
+}
+
+bootstrap();
+</file>
+
+</files>

@@ -91,7 +91,7 @@ export default function EditorPage({
       <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-brand-dark-darker shrink-0">
         <div className="flex items-center gap-4">
           <Link
-            href="/projects"
+            href={`/projects/${projectId}`}
             className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition"
           >
             <ArrowLeft className="w-5 h-5" />

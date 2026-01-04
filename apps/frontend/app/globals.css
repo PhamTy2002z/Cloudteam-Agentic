@@ -12,19 +12,19 @@
     --card-foreground: 0 0% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 15%;
-    --primary: 191 89% 45%;
+    --primary: 18 65% 59%; /* #D97755 coral - unified with sidebar */
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 15%;
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
-    --accent: 191 89% 45%;
+    --accent: 18 65% 59%; /* #D97755 coral */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 90%;
     --input: 0 0% 90%;
-    --ring: 191 89% 45%;
+    --ring: 18 65% 59%; /* #D97755 coral */
     --radius: 0.5rem;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
@@ -39,25 +39,25 @@
   }
 
   .dark {
-    --background: 0 0% 10%;
+    --background: 24 10% 10%; /* #1A1917 - unified with sidebar warm dark */
     --foreground: 0 0% 95%;
     --card: 0 0% 13%;
     --card-foreground: 0 0% 95%;
     --popover: 0 0% 13%;
     --popover-foreground: 0 0% 95%;
-    --primary: 191 89% 45%;
+    --primary: 18 65% 59%; /* #D97755 coral - unified with sidebar */
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 95%;
     --muted: 0 0% 18%;
     --muted-foreground: 0 0% 60%;
-    --accent: 191 89% 45%;
+    --accent: 18 65% 59%; /* #D97755 coral */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 95%;
     --border: 0 0% 22%;
     --input: 0 0% 22%;
-    --ring: 191 89% 45%;
+    --ring: 18 65% 59%; /* #D97755 coral */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -79,8 +79,8 @@
   }
 
   /* Color Usage Guidelines:
-   * --primary (#0DA8D6): CTAs, links, focus rings, interactive elements
-   * --sidebar-primary (#D97755): Sidebar accents, coral/orange highlights
+   * --primary (#D97755): CTAs, links, focus rings, interactive elements (coral)
+   * --sidebar-primary (#D97755): Sidebar accents, unified with primary
    * --success (#22C55E): Success states, unlocked status, confirmations
    * --destructive (#7F1D1D): Error states, locked status, danger actions
    * --warning (#F59E0B): Non-critical alerts, pending states
@@ -140,5 +140,35 @@
   .card-elevated {
     @apply shadow-xl;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Micro-interactions - Phase 04 */
+  .button-press {
+    @apply active:scale-[0.98] transition-transform;
+  }
+
+  .card-entrance {
+    animation: slideUp 300ms ease-out;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .card-entrance,
+  .button-press,
+  .card-hover-lift {
+    animation: none;
+    transition: none;
   }
 }
