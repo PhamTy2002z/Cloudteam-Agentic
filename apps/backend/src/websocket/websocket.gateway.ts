@@ -55,6 +55,9 @@ export class NotificationsGateway
 
   async handleConnection(client: Socket) {
     try {
+      // Allow unauthenticated connections in development for web UI
+      const isDev = process.env.NODE_ENV !== 'production';
+
       // Validate API key from handshake auth or query
       const apiKey =
         client.handshake.auth?.apiKey ||
@@ -62,6 +65,13 @@ export class NotificationsGateway
         client.handshake.query?.apiKey;
 
       if (!apiKey) {
+        if (isDev) {
+          // Allow unauthenticated connections in dev mode for web UI
+          client.data.authenticated = false;
+          client.data.devMode = true;
+          this.logger.log(`Client ${client.id} connected (dev mode, no auth)`);
+          return;
+        }
         this.logger.warn(`Client ${client.id} rejected: no API key`);
         client.emit('error', { message: 'API key required' });
         client.disconnect();
@@ -101,6 +111,17 @@ export class NotificationsGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() data: JoinMessage,
   ) {
+    // In dev mode, allow joining any project room
+    if (client.data.devMode) {
+      if (!data.projectId || !isValidCuid(data.projectId)) {
+        throw new WsException('Invalid projectId format');
+      }
+      const room = `project:${data.projectId}`;
+      client.join(room);
+      this.logger.log(`Client ${client.id} joined room ${room} (dev mode)`);
+      return { success: true, room };
+    }
+
     // Validate authentication
     if (!client.data.authenticated) {
       throw new WsException('Not authenticated');

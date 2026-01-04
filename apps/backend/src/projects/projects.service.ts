@@ -26,13 +26,15 @@ export class ProjectsService {
   }
 
   async findAll() {
-    return this.prisma.project.findMany({
+    const projects = await this.prisma.project.findMany({
       include: {
         locks: true,
         _count: { select: { docs: true, apiKeys: true } },
       },
       orderBy: { updatedAt: 'desc' },
     });
+    // Exclude token from response for security
+    return projects.map(({ token, ...rest }) => rest);
   }
 
   async findOne(id: string) {
@@ -43,6 +45,21 @@ export class ProjectsService {
         locks: true,
         apiKeys: { where: { isActive: true } },
       },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${id} not found`);
+    }
+
+    // Exclude token from response for security
+    const { token, ...rest } = project;
+    return rest;
+  }
+
+  // Internal method to get project with token for service use
+  private async findOneWithToken(id: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id },
     });
 
     if (!project) {
@@ -86,7 +103,7 @@ export class ProjectsService {
   }
 
   async getDecryptedToken(projectId: string): Promise<string> {
-    const project = await this.findOne(projectId);
+    const project = await this.findOneWithToken(projectId);
     return this.crypto.decrypt(project.token);
   }
 }

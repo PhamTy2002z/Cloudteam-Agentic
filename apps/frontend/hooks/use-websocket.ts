@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { io, Socket } from 'socket.io-client';
 
 type WebSocketStatus = 'connecting' | 'connected' | 'disconnected';
 
@@ -12,63 +13,74 @@ interface LockEvent {
   lockedAt?: string;
 }
 
-export function useWebSocket(projectId?: string) {
+export function useWebSocket(projectId?: string, apiKey?: string) {
   const [status, setStatus] = useState<WebSocketStatus>('disconnected');
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const queryClient = useQueryClient();
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (socketRef.current?.connected) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
+
+    const socket = io(wsUrl, {
+      auth: { apiKey },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 3000,
+      reconnectionAttempts: 5,
+    });
+
+    socketRef.current = socket;
     setStatus('connecting');
 
-    ws.onopen = () => {
+    socket.on('connect', () => {
       setStatus('connected');
       if (projectId) {
-        ws.send(JSON.stringify({ type: 'join', projectId }));
+        socket.emit('join', { projectId });
       }
-    };
+    });
 
-    ws.onmessage = (event) => {
-      try {
-        const data: LockEvent = JSON.parse(event.data);
-        if (data.type === 'lock:acquired' || data.type === 'lock:released') {
-          queryClient.invalidateQueries({ queryKey: ['lock', data.projectId] });
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
-        }
-      } catch {
-        // Ignore parse errors
+    socket.on('lock:acquired', (data: LockEvent) => {
+      queryClient.invalidateQueries({ queryKey: ['lock', data.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    });
+
+    socket.on('lock:released', (data: LockEvent) => {
+      queryClient.invalidateQueries({ queryKey: ['lock', data.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    });
+
+    socket.on('doc:updated', () => {
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: ['docs', projectId] });
       }
-    };
+    });
 
-    ws.onerror = () => {
-      setStatus('disconnected');
-    };
+    socket.on('error', (error: { message: string }) => {
+      console.warn('WebSocket error:', error.message);
+    });
 
-    ws.onclose = () => {
+    socket.on('connect_error', () => {
       setStatus('disconnected');
-      wsRef.current = null;
-      reconnectTimeoutRef.current = setTimeout(connect, 3000);
-    };
-  }, [projectId, queryClient]);
+    });
+
+    socket.on('disconnect', () => {
+      setStatus('disconnected');
+    });
+  }, [projectId, apiKey, queryClient]);
 
   useEffect(() => {
     connect();
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      wsRef.current?.close();
+      socketRef.current?.disconnect();
+      socketRef.current = null;
     };
   }, [connect]);
 
-  const send = useCallback((data: object) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(data));
+  const send = useCallback((event: string, data: object) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit(event, data);
     }
   }, []);
 
