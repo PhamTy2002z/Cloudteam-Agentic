@@ -59,12 +59,12 @@ export default function ProjectsPage() {
             {/* Add new project card */}
             <button
               onClick={() => setCreateDialogOpen(true)}
-              className="bg-card/50 border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center text-center min-h-[200px] hover:border-primary/50 hover:bg-card transition cursor-pointer group"
+              className="bg-card/50 border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center text-center min-h-[200px] card-hover-lift hover:border-primary/50 hover:bg-card cursor-pointer group"
             >
-              <div className="w-12 h-12 rounded-full bg-secondary group-hover:bg-primary/20 flex items-center justify-center mb-3 transition">
-                <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition" />
+              <div className="w-12 h-12 rounded-full bg-secondary group-hover:bg-primary/20 flex items-center justify-center mb-3 transition-colors">
+                <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <h3 className="font-medium text-muted-foreground group-hover:text-foreground transition">
+              <h3 className="font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
                 Add New Project
               </h3>
               <p className="text-sm text-muted-foreground mt-1">

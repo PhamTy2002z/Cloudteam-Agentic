@@ -125,3 +125,20 @@
 .pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
 }
+
+/* Card Elevation System - Phase 03 */
+@layer utilities {
+  .card-hover-lift {
+    @apply transition-all duration-200;
+  }
+
+  .card-hover-lift:hover {
+    @apply -translate-y-0.5 shadow-lg;
+    border-color: hsl(var(--border) / 0.6);
+  }
+
+  .card-elevated {
+    @apply shadow-xl;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}

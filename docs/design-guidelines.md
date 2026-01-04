@@ -301,6 +301,49 @@ transition-[width] duration-200 ease-linear
 
 ---
 
+## Card Elevation System (Phase 03)
+
+### Utility Classes
+
+**`card-hover-lift`** - Subtle elevation effect on hover:
+```css
+.card-hover-lift {
+  @apply transition-all duration-200;
+}
+.card-hover-lift:hover {
+  @apply -translate-y-0.5 shadow-lg;
+  border-color: hsl(var(--border) / 0.6);
+}
+```
+
+**Usage:**
+- **Project cards**: `<Card className="p-6 card-hover-lift rounded-lg">`
+- **Add New cards**: `<button className="card-hover-lift rounded-lg">`
+
+**Behavior:**
+- Transform: -2px Y-axis lift on hover
+- Shadow: Elevates from default to `shadow-lg`
+- Border: Softens border opacity to 60%
+- Duration: 200ms smooth transition
+
+**`card-elevated`** - Static elevated state:
+```css
+.card-elevated {
+  @apply shadow-xl;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+```
+
+### Component Applications
+
+| Component | Class Combination | Effect |
+|-----------|------------------|--------|
+| ProjectCard | `p-6 card-hover-lift rounded-lg` | Hover elevation + border fade |
+| Add New Project | `card-hover-lift rounded-lg` | Dashed border + hover lift |
+| Settings Button | `hover:bg-secondary` | Background change only |
+
+---
+
 ## Accessibility
 
 - **Contrast**: Minimum 4.5:1 (WCAG AA)
@@ -359,4 +402,4 @@ apps/frontend/
 
 ---
 
-*Last updated: 2026-01-04 (Phase 02: Spacing normalization - p-6/gap-6/rounded-lg standard)*
+*Last updated: 2026-01-04 (Phase 03: Component consistency - card-hover-lift utility, button refactor)*

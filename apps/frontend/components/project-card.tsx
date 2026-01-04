@@ -22,7 +22,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Link href={`/projects/${project.id}`} className="block">
-      <Card className="p-6 hover:border-primary/50 transition group cursor-pointer bg-card rounded-lg">
+      <Card className="p-6 card-hover-lift group cursor-pointer bg-card rounded-lg hover:border-primary/50">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shrink-0">
@@ -49,15 +49,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
         </div>
 
         <div className="flex items-center gap-2 pt-4 border-t border-border">
-          <span
-            className={`flex-1 text-center py-2 text-sm rounded-lg transition font-medium ${
-              isLocked
-                ? 'text-muted-foreground bg-secondary cursor-not-allowed opacity-50'
-                : 'text-white bg-primary hover:bg-primary/90'
-            }`}
+          <Button
+            variant={isLocked ? 'secondary' : 'default'}
+            disabled={isLocked}
+            className="flex-1"
+            size="sm"
           >
             {isLocked ? 'View Only' : 'Open Project'}
-          </span>
+          </Button>
           <Button
             variant="ghost"
             size="icon"
