@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { DocsService } from './docs.service';
 import { UpdateDocDto } from './dto/update-doc.dto';
+import { SyncDocsDto } from './dto/sync-docs.dto';
 
 @Controller('projects/:projectId/docs')
 export class DocsController {
@@ -36,8 +37,14 @@ export class DocsController {
   }
 
   @Post('sync')
-  syncFromGitHub(@Param('projectId') projectId: string) {
-    return this.docsService.syncFromGitHub(projectId);
+  syncFromGitHub(
+    @Param('projectId') projectId: string,
+    @Body() dto: SyncDocsDto,
+  ) {
+    return this.docsService.syncFromGitHub(projectId, {
+      path: dto.path,
+      recursive: dto.recursive,
+    });
   }
 
   @Post(':fileName/push')

@@ -65,43 +65,83 @@ export class GitHubService {
     repoUrl: string,
     docsPath: string,
     branch = 'main',
+    recursive = false,
   ): Promise<DocFile[]> {
     const octokit = this.createClient(token);
     const { owner, repo } = this.parseRepoUrl(repoUrl);
 
+    // Normalize path: empty string or "." means root
+    const normalizedPath = docsPath === '.' || docsPath === '' ? '' : docsPath;
+
     try {
-      const { data } = await octokit.repos.getContent({
+      const docs: DocFile[] = [];
+      await this.fetchDocsRecursive(
+        octokit,
         owner,
         repo,
-        path: docsPath,
-        ref: branch,
-      });
-
-      if (!Array.isArray(data)) {
-        throw new Error(`${docsPath} is not a directory`);
-      }
-
-      const mdFiles = data.filter(
-        (item) => item.type === 'file' && item.name.endsWith('.md'),
+        normalizedPath,
+        branch,
+        recursive,
+        docs,
       );
-
-      const docs: DocFile[] = [];
-      for (const file of mdFiles) {
-        const doc = await this.getDocFile(
-          token,
-          repoUrl,
-          docsPath,
-          file.name,
-          branch,
-        );
-        docs.push(doc);
-      }
-
       return docs;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to list ${docsPath}: ${errMsg}`);
       throw error;
+    }
+  }
+
+  private async fetchDocsRecursive(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+    path: string,
+    branch: string,
+    recursive: boolean,
+    docs: DocFile[],
+  ): Promise<void> {
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: path || '',
+      ref: branch,
+    });
+
+    if (!Array.isArray(data)) {
+      // Single file - check if markdown
+      if (data.type === 'file' && data.name.endsWith('.md')) {
+        const content = Buffer.from(data.content, 'base64').toString('utf-8');
+        // Use relative path from root as fileName
+        const fileName = path || data.name;
+        docs.push({ fileName, content, sha: data.sha });
+      }
+      return;
+    }
+
+    // Directory - process items
+    for (const item of data) {
+      if (item.type === 'file' && item.name.endsWith('.md')) {
+        const filePath = path ? `${path}/${item.name}` : item.name;
+        try {
+          const { data: fileData } = await octokit.repos.getContent({
+            owner,
+            repo,
+            path: filePath,
+            ref: branch,
+          });
+
+          if (!Array.isArray(fileData) && fileData.type === 'file') {
+            const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
+            docs.push({ fileName: filePath, content, sha: fileData.sha });
+          }
+        } catch (err) {
+          this.logger.warn(`Failed to fetch ${filePath}: ${err}`);
+        }
+      } else if (item.type === 'dir' && recursive) {
+        const dirPath = path ? `${path}/${item.name}` : item.name;
+        await this.fetchDocsRecursive(octokit, owner, repo, dirPath, branch, recursive, docs);
+      }
     }
   }
 

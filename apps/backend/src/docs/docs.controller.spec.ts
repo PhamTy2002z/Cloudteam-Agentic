@@ -89,10 +89,29 @@ describe('DocsController', () => {
       const syncedDocs = [mockDoc, { ...mockDoc, id: 'doc-456' }];
       mockDocsService.syncFromGitHub.mockResolvedValue(syncedDocs);
 
-      const result = await controller.syncFromGitHub('project-123');
+      const result = await controller.syncFromGitHub('project-123', {});
 
-      expect(service.syncFromGitHub).toHaveBeenCalledWith('project-123');
+      expect(service.syncFromGitHub).toHaveBeenCalledWith('project-123', {
+        path: undefined,
+        recursive: undefined,
+      });
       expect(result).toHaveLength(2);
+    });
+
+    it('should sync docs with custom path and recursive', async () => {
+      const syncedDocs = [mockDoc];
+      mockDocsService.syncFromGitHub.mockResolvedValue(syncedDocs);
+
+      const result = await controller.syncFromGitHub('project-123', {
+        path: 'docs',
+        recursive: true,
+      });
+
+      expect(service.syncFromGitHub).toHaveBeenCalledWith('project-123', {
+        path: 'docs',
+        recursive: true,
+      });
+      expect(result).toHaveLength(1);
     });
   });
 

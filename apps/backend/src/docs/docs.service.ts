@@ -70,7 +70,10 @@ export class DocsService {
     });
   }
 
-  async syncFromGitHub(projectId: string) {
+  async syncFromGitHub(
+    projectId: string,
+    options?: { path?: string; recursive?: boolean },
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
     });
@@ -81,13 +84,18 @@ export class DocsService {
 
     const decryptedToken = this.getDecryptedToken(project.token);
 
+    // Use provided path or default to project's docsPath
+    const syncPath = options?.path ?? project.docsPath;
+    const recursive = options?.recursive ?? false;
+
     let remoteDocs;
     try {
       remoteDocs = await this.github.getAllDocs(
         decryptedToken,
         project.repoUrl,
-        project.docsPath,
+        syncPath,
         project.branch,
+        recursive,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -95,7 +103,7 @@ export class DocsService {
         throw new BadRequestException('Invalid GitHub token. Please update your token in Settings.');
       }
       if (message.includes('Not Found') || message.includes('404')) {
-        throw new BadRequestException(`Folder "${project.docsPath}" not found in repository.`);
+        throw new BadRequestException(`Folder "${syncPath}" not found in repository.`);
       }
       throw new BadRequestException(`GitHub sync failed: ${message}`);
     }
