@@ -10,6 +10,7 @@ import {
   AlertCircle,
   GitBranch,
   FolderOpen,
+  ChevronDown,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { useProject } from '@/hooks/use-projects';
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { LockStatus } from '@/components/lock-status';
 import { EmptyState } from '@/components/empty-state';
+import { SyncDocsDialog } from '@/components/sync-docs-dialog';
 import { toast } from 'sonner';
 
 // File metadata mapping for better UX
@@ -61,11 +63,13 @@ export default function ProjectPage({
   const { data: docs, refetch: refetchDocs } = useDocs(params.id);
   const syncDocs = useSyncDocs(params.id);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
 
-  const handleSync = async () => {
+  const handleSync = async (options?: { path?: string; recursive?: boolean }) => {
     setSyncError(null);
+    setSyncDialogOpen(false);
     try {
-      await syncDocs.mutateAsync();
+      await syncDocs.mutateAsync(options);
       refetchDocs();
       toast.success('Documents synced successfully');
     } catch (err) {
@@ -73,13 +77,15 @@ export default function ProjectPage({
       if (message.includes('credentials') || message.includes('401')) {
         setSyncError('Invalid GitHub token. Please update your token in Settings.');
       } else if (message.includes('Not Found') || message.includes('404')) {
-        setSyncError(`Folder "${project?.docsPath}" not found in repository.`);
+        setSyncError(`Folder not found in repository.`);
       } else {
         setSyncError(message);
       }
       toast.error('Sync failed');
     }
   };
+
+  const handleQuickSync = () => handleSync();
 
   // Sort docs by category for better organization
   const sortedDocs = useMemo(() => {
@@ -171,15 +177,25 @@ export default function ProjectPage({
                 </p>
               )}
             </div>
-            <Button
-              onClick={handleSync}
-              disabled={syncDocs.isPending}
-              variant="success"
-              size="sm"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncDocs.isPending ? 'animate-spin' : ''}`} />
-              {syncDocs.isPending ? 'Syncing...' : 'Sync from GitHub'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleQuickSync}
+                disabled={syncDocs.isPending}
+                variant="success"
+                size="sm"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${syncDocs.isPending ? 'animate-spin' : ''}`} />
+                {syncDocs.isPending ? 'Syncing...' : 'Quick Sync'}
+              </Button>
+              <Button
+                onClick={() => setSyncDialogOpen(true)}
+                disabled={syncDocs.isPending}
+                variant="outline"
+                size="sm"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
           {hasDocs ? (
@@ -233,7 +249,7 @@ export default function ProjectPage({
                 description={`Click "Sync from GitHub" to pull documentation files from your repository's ${project.docsPath}/ folder.`}
                 action={{
                   label: syncDocs.isPending ? 'Syncing...' : 'Sync from GitHub',
-                  onClick: handleSync,
+                  onClick: handleQuickSync,
                   loading: syncDocs.isPending,
                   icon: RefreshCw,
                 }}
@@ -252,6 +268,15 @@ export default function ProjectPage({
           </Link>
         </div>
       </div>
+
+      {/* Sync Dialog */}
+      <SyncDocsDialog
+        open={syncDialogOpen}
+        onOpenChange={setSyncDialogOpen}
+        defaultPath={project.docsPath}
+        isPending={syncDocs.isPending}
+        onSync={handleSync}
+      />
     </>
   );
 }

@@ -77,7 +77,7 @@ export default function EditorPage({
   };
 
   const handleRefresh = () => {
-    syncDocs.mutate();
+    syncDocs.mutate({});
     refetchDocs();
   };
 

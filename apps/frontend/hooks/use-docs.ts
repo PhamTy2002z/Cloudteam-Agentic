@@ -35,7 +35,8 @@ export function useSyncDocs(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => api.syncDocs(projectId),
+    mutationFn: (options?: { path?: string; recursive?: boolean }) =>
+      api.syncDocs(projectId, options),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['docs', projectId] });
     },

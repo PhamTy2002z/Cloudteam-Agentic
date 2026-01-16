@@ -49,8 +49,11 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ content }),
     }),
-  syncDocs: (projectId: string) =>
-    fetcher<Doc[]>(`/projects/${projectId}/docs/sync`, { method: 'POST' }),
+  syncDocs: (projectId: string, options?: { path?: string; recursive?: boolean }) =>
+    fetcher<Doc[]>(`/projects/${projectId}/docs/sync`, {
+      method: 'POST',
+      body: JSON.stringify(options ?? {}),
+    }),
   pushDoc: (projectId: string, fileName: string) =>
     fetcher<{ success: boolean }>(`/projects/${projectId}/docs/${fileName}/push`, {
       method: 'POST',

@@ -76,7 +76,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2 transition-[padding] duration-200 ease-linear">
         <Link
           href="/projects"
-          className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center"
+          className="flex items-center gap-3 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:justify-center"
         >
           <Logo />
           <span className="font-semibold text-lg text-sidebar-foreground tracking-tight whitespace-nowrap transition-[opacity,width] duration-200 ease-linear group-data-[collapsible=icon]:w-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:overflow-hidden">
